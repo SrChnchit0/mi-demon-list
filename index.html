@@ -479,29 +479,34 @@
       if (!container || !supabaseClient) return;
 
       try {
-        const { data: subs, error } = await supabaseClient
-          .from("submissions")
-          .select(`
-            *,
-            levels ( position, name ),
-            profiles ( username )
-          `)
-          .eq("status", "approved");
+        // Consultamos las tablas por separado para evitar errores de relación en Supabase
+        const [subRes, lvlRes, profRes] = await Promise.all([
+          supabaseClient.from("submissions").select("*").eq("status", "approved"),
+          supabaseClient.from("levels").select("*"),
+          supabaseClient.from("profiles").select("*")
+        ]);
 
-        if (error) {
-          console.error(error);
-          container.innerHTML = "<p style='color: var(--danger-color);'>Error al cargar el leaderboard.</p>";
-          return;
-        }
+        if (subRes.error) throw subRes.error;
 
-        if (!subs || subs.length === 0) {
+        const subs = subRes.data || [];
+        const levels = lvlRes.data || [];
+        const profiles = profRes.data || [];
+
+        // Creamos diccionarios de búsqueda rápida
+        const levelMap = {};
+        levels.forEach(l => { levelMap[l.id] = `#${l.position} ${l.name}`; });
+
+        const profileMap = {};
+        profiles.forEach(p => { profileMap[p.id] = p.username; });
+
+        if (subs.length === 0) {
           container.innerHTML = "<p style='color: var(--text-muted);'>No hay récords aprobados aún.</p>";
           return;
         }
 
         container.innerHTML = subs.map(sub => {
-          const playerName = sub.profiles?.username || "Jugador anónimo";
-          const levelName = sub.levels ? `#${sub.levels.position} ${sub.levels.name}` : "Nivel desconocido";
+          const playerName = profileMap[sub.user_id] || "Jugador anónimo";
+          const levelName = levelMap[sub.level_id] || "Nivel desconocido";
           return `
             <div style="background: var(--card-bg); padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
               <div>
@@ -512,9 +517,12 @@
             </div>
           `;
         }).join("");
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        console.error("Error detallado en leaderboard:", err);
+        container.innerHTML = "<p style='color: var(--danger-color);'>Error al cargar el leaderboard.</p>";
+      }
     }
-
+    
     async function loadAdminSubmissions() {
       const container = document.getElementById("admin-submissions-container");
       if (!container || !supabaseClient) return;
