@@ -282,7 +282,7 @@ async function submitRecord(e) {
 // Envío a Discord (Canal Privado #records)
 async function sendDiscordNotification(record) {
   // ⚠️ PEGA AQUÍ LA URL DE TU WEBHOOK PRIVADO
-  const DISCORD_WEBHOOK_URL = "URL_DE_TU_WEBHOOK_PRIVADO";
+  const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966150277275758/guiKF0NBX1D-b3qOcjGBLx5ClICBA0ToBImdoItn-yAEea3qUIBFOx-xcnKZsXjBV1nG";
 
   if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.includes("URL_DE_TU_WEBHOOK")) return;
 
