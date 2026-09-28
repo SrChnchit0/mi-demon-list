@@ -188,6 +188,9 @@
   <script>
     const SUPABASE_URL = "https://jdvgdgiomrbmlxvvjvhd.supabase.co"; 
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI";
+    
+    // URL de tu Webhook de Discord integrada
+    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966150277275758/guiKF0NBX1D-b3qOcjGBLx5ClICBA0ToBImdoItn-yAEea3qUIBFOx-xcnKZsXjBV1nG";
 
     let supabaseClient = null;
     let currentUser = null;
@@ -222,11 +225,9 @@
       const email = document.getElementById("auth-email").value;
       const password = document.getElementById("auth-password").value;
 
-      // Intentar iniciar sesión primero
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
       if (error) {
-        // Si las credenciales no son válidas, preguntar si desea crear la cuenta
         if (error.message.includes("Invalid login credentials")) {
           const crear = confirm("Esa cuenta no existe o la contraseña es incorrecta. ¿Deseas registrar este correo como usuario nuevo?");
           if (crear) {
@@ -310,21 +311,50 @@
       e.preventDefault();
       if (!currentUser) return alert("Debes iniciar sesión para subir un récord.");
 
-      const level_id = document.getElementById("level-select").value;
+      const levelSelect = document.getElementById("level-select");
+      const level_name = levelSelect.options[levelSelect.selectedIndex].text;
+      const level_id = levelSelect.value;
       const percent = document.getElementById("percent").value;
       const hz = document.getElementById("hz").value;
       const video_url = document.getElementById("video-url").value;
 
+      // 1. Guardar en Supabase
       const { data, error } = await supabaseClient.from("submissions").insert([
         { user_id: currentUser.id, level_id, percent, hz, video_url, status: "pending" }
       ]);
 
       if (error) {
-        alert("Error al enviar récord: " + error.message);
-      } else {
-        alert("¡Récord enviado a revisión con éxito!");
-        document.getElementById("record-form").reset();
+        alert("Error al enviar récord a la base de datos: " + error.message);
+        return;
       }
+
+      // 2. Notificar automáticamente en Discord
+      try {
+        await fetch(DISCORD_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            embeds: [{
+              title: "🏆 ¡Nuevo Récord Enviado!",
+              color: 3066993, // Color cian de la Demon List
+              fields: [
+                { name: "Usuario", value: currentUser.email, inline: true },
+                { name: "Nivel", value: level_name, inline: true },
+                { name: "Porcentaje", value: `${percent}%`, inline: true },
+                { name: "Tasa de refresco", value: `${hz} Hz`, inline: true },
+                { name: "Video / Prueba", value: video_url }
+              ],
+              footer: { text: "Demon List Bot • Pendiente de revisión" },
+              timestamp: new Date().toISOString()
+            }]
+          })
+        });
+      } catch (err) {
+        console.error("Error al enviar a Discord:", err);
+      }
+
+      alert("¡Récord enviado con éxito y notificado en Discord!");
+      document.getElementById("record-form").reset();
     }
 
     document.addEventListener("DOMContentLoaded", async () => {
