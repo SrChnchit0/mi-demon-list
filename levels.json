@@ -1,24 +1,19 @@
 [
   {
     "position": 1,
-    "name": "Acheron",
-    "publisher": "Riot",
-    "verifier": "Zoink",
-    "video": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    "name": "Blade Of Justice",
+    "publisher": "Manix648",
+    "verifier": "ItsDorky",
+    "video": "https://www.youtube.com/embed/CFSajH5jxF8",
     "percentToQualify": 100,
-    "points": 250,
+    "points": 350,
     "records": [
       {
-        "user": "Trick",
+        "user": "ItsDorky",
         "percent": 100,
-        "video": "https://www.youtube.com/watch?v=example1",
-        "hz": 360
-      },
-      {
-        "user": "Doggie",
-        "percent": 100,
-        "video": "https://www.youtube.com/watch?v=example2",
-        "hz": 240
+        "video": "https://www.youtube.com/embed/CFSajH5jxF8",
+        "hz": 180
+     
       }
     ]
   },
