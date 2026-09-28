@@ -3,186 +3,243 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Demon List</title>
+  <title>Geometry Dash Demon List</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-color: #121212;
-      --card-bg: #1a1a1a;
-      --accent-color: #00adb5;
-      --text-color: #eeeeee;
-      --text-muted: #888888;
-      --border-color: #333333;
-      --danger-color: #e53935;
-      --success-color: #43a047;
-      --gold-color: #ffd700;
+      --bg-color: #0b0f19;
+      --card-bg: #131b2e;
+      --card-hover: #1a2642;
+      --accent-color: #00ffcc;
+      --accent-glow: rgba(0, 255, 204, 0.25);
+      --text-color: #f3f4f6;
+      --text-muted: #9ca3af;
+      --border-color: #1e293b;
+      --danger-color: #ef4444;
+      --success-color: #22c55e;
+      --gold-color: #f59e0b;
     }
     * { box-sizing: border-box; }
     body {
       background-color: var(--bg-color);
       color: var(--text-color);
-      font-family: Arial, sans-serif;
+      font-family: 'Inter', sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 0;
     }
+    
+    /* HEADER MODERNO */
     header {
+      background: rgba(11, 15, 25, 0.9);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 15px 30px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid var(--border-color);
-      padding-bottom: 15px;
-      margin-bottom: 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 15px;
     }
     h1 {
       margin: 0;
       color: var(--accent-color);
-      font-size: 1.5rem;
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
       cursor: pointer;
+      text-shadow: 0 0 15px var(--accent-glow);
     }
     nav {
       display: flex;
-      gap: 5px;
+      gap: 8px;
       flex-wrap: wrap;
+      align-items: center;
     }
     nav button, .btn {
-      background: none;
+      background: var(--card-bg);
       border: 1px solid var(--border-color);
       color: var(--text-color);
-      padding: 8px 12px;
-      border-radius: 4px;
+      padding: 8px 16px;
+      border-radius: 8px;
       cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+    nav button:hover, .btn:hover {
+      border-color: var(--accent-color);
+      background: var(--card-hover);
     }
     nav button.btn-primary, .btn-primary {
       background-color: var(--accent-color);
-      color: #fff;
+      color: #0b0f19;
       border: none;
-      font-weight: bold;
+      box-shadow: 0 0 12px var(--accent-glow);
     }
-    .btn-success { background-color: var(--success-color); color: #fff; border: none; font-weight: bold; }
-    .btn-danger { background-color: var(--danger-color); color: #fff; border: none; font-weight: bold; }
-    
+    nav button.btn-primary:hover {
+      opacity: 0.9;
+    }
+    .btn-success { background-color: var(--success-color); color: #fff; border: none; }
+    .btn-danger { background-color: var(--danger-color); color: #fff; border: none; }
+
+    main {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      margin-bottom: 20px;
+      font-weight: 700;
+      border-left: 4px solid var(--accent-color);
+      padding-left: 10px;
+    }
+
+    /* MODAL Y FORMULARIOS */
     .modal {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.85);
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(5px);
       display: flex; justify-content: center; align-items: center;
       z-index: 1000;
     }
     .modal-content {
       background: var(--card-bg);
-      padding: 20px;
-      border-radius: 8px;
+      padding: 25px;
+      border-radius: 12px;
       width: 90%;
-      max-width: 450px;
+      max-width: 480px;
       border: 1px solid var(--border-color);
+      box-shadow: 0 15px 30px rgba(0,0,0,0.5);
     }
     .form-group {
-      margin-bottom: 12px;
+      margin-bottom: 15px;
     }
     .form-group label {
       display: block;
-      margin-bottom: 5px;
+      margin-bottom: 6px;
       font-size: 0.85rem;
       color: var(--text-muted);
+      font-weight: 500;
     }
     input, select, textarea {
       width: 100%;
-      padding: 10px;
-      background: #2a2a2a;
+      padding: 11px;
+      background: #0b0f19;
       border: 1px solid var(--border-color);
       color: var(--text-color);
-      border-radius: 4px;
+      border-radius: 8px;
+      font-family: inherit;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent-color);
     }
 
-    /* ESTILO DE PERFIL TIPO BUFFER TEAM */
+    /* TARJETA DE PERFIL (ESTILO BUFFER TEAM) */
     .profile-card {
       background: var(--card-bg);
-      border-radius: 12px;
+      border-radius: 14px;
       overflow: hidden;
       border: 1px solid var(--border-color);
-      max-width: 600px;
-      margin: 0 auto;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      max-width: 100%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
     }
     .profile-banner {
-      height: 140px;
+      height: 160px;
       background-size: cover;
       background-position: center;
-      background-color: #2a2a2a;
+      background-color: #1e293b;
       position: relative;
     }
     .profile-header-info {
-      padding: 0 20px 20px;
+      padding: 0 24px 24px;
       position: relative;
-      margin-top: -45px;
+      margin-top: -50px;
     }
     .profile-avatar {
-      width: 90px;
-      height: 90px;
+      width: 100px;
+      height: 100px;
       border-radius: 50%;
       border: 4px solid var(--card-bg);
       background-size: cover;
       background-position: center;
-      background-color: #333;
+      background-color: #0b0f19;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
     .profile-name {
-      font-size: 1.4rem;
-      font-weight: bold;
-      margin: 10px 0 2px;
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin: 12px 0 4px;
       color: #fff;
     }
     .profile-bio {
       color: var(--text-muted);
-      font-size: 0.9rem;
-      margin-bottom: 15px;
+      font-size: 0.95rem;
+      margin-bottom: 20px;
       white-space: pre-line;
+      line-height: 1.4;
     }
     .profile-stats {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 10px;
-      background: rgba(0,0,0,0.3);
-      padding: 12px;
-      border-radius: 8px;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      background: rgba(11, 15, 25, 0.5);
+      padding: 15px;
+      border-radius: 10px;
       border: 1px solid var(--border-color);
     }
     .stat-box label {
       font-size: 0.75rem;
       color: var(--text-muted);
       display: block;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .stat-box span {
-      font-size: 1rem;
-      font-weight: bold;
+      font-size: 1.1rem;
+      font-weight: 700;
       color: var(--accent-color);
     }
-    .clickable-player {
-      color: var(--accent-color);
-      cursor: pointer;
-      text-decoration: underline;
-    }
-    .clickable-player:hover {
-      color: #fff;
-    }
-    .leaderboard-item {
+
+    /* TARJETAS DE NIVELES Y LEADERBOARD */
+    .list-item {
       background: var(--card-bg);
-      padding: 12px 16px;
-      margin-bottom: 10px;
-      border-radius: 6px;
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      border-radius: 10px;
       border: 1px solid var(--border-color);
       display: flex;
       justify-content: space-between;
       align-items: center;
+      transition: all 0.2s;
+    }
+    .list-item:hover {
+      border-color: rgba(0, 255, 204, 0.4);
+      background: var(--card-hover);
+    }
+    .clickable-player {
+      color: var(--accent-color);
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .clickable-player:hover {
+      text-decoration: underline;
     }
     .rank-badge {
-      font-weight: bold;
-      font-size: 1.1rem;
+      font-weight: 800;
+      font-size: 1.2rem;
       margin-right: 15px;
-      min-width: 30px;
+      min-width: 35px;
       color: var(--text-muted);
     }
-    .rank-1 { color: var(--gold-color); }
+    .rank-1 { color: var(--gold-color); text-shadow: 0 0 10px rgba(245, 158, 11, 0.3); }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js"></script>
   <script>var vConsole = new VConsole();</script>
@@ -197,8 +254,8 @@
       <button onclick="showSection('leaderboard')">Leaderboard</button>
       <button onclick="showSection('submit')">Subir Récord</button>
       <button onclick="showSection('rules')">Reglas</button>
-      <button id="profile-nav-btn" onclick="showSection('profile')" style="display: none; background: #333; border-color: var(--accent-color);">Mi Perfil</button>
-      <button id="admin-nav-btn" onclick="showSection('admin')" style="display: none; background: #333; border-color: var(--danger-color);">Admin</button>
+      <button id="profile-nav-btn" onclick="showSection('profile')" style="display: none; background: var(--card-hover); border-color: var(--accent-color);">Mi Perfil</button>
+      <button id="admin-nav-btn" onclick="showSection('admin')" style="display: none; background: #2a0b0e; border-color: var(--danger-color);">Admin</button>
       <button id="auth-btn" class="btn-primary" onclick="openAuthModal()">Iniciar Sesión</button>
     </nav>
   </header>
@@ -209,21 +266,19 @@
       <div id="levels-container"><p style="color: var(--text-muted);">Cargando niveles...</p></div>
     </section>
 
-    <!-- LEADERBOARD GENERAL DE PUNTOS -->
     <section id="sec-leaderboard" style="display: none;">
-      <h2>Tabla de Clasificación (Puntuación)</h2>
+      <h2>Tabla de Clasificación</h2>
       <div id="leaderboard-container"><p style="color: var(--text-muted);">Calculando puntos...</p></div>
     </section>
 
-    <!-- SECCIÓN PARA VER PERFIL DE OTROS JUGADORES -->
     <section id="sec-view-profile" style="display: none;">
-      <button onclick="showSection('leaderboard')" class="btn" style="margin-bottom: 15px;">← Volver al Leaderboard</button>
+      <button onclick="showSection('leaderboard')" class="btn" style="margin-bottom: 20px;">← Volver al Leaderboard</button>
       <div id="external-profile-container"></div>
     </section>
 
     <section id="sec-submit" style="display: none;">
       <h2>Enviar Récord</h2>
-      <form id="record-form" onsubmit="handleRecordSubmit(event)">
+      <form id="record-form" onsubmit="handleRecordSubmit(event)" class="modal-content" style="max-width: 100%; margin: 0;">
         <div class="form-group">
           <label for="username-display">Jugador:</label>
           <input type="text" id="username-display" disabled required>
@@ -248,11 +303,10 @@
       </form>
     </section>
 
-    <!-- SECCIÓN DE PERFIL PROPIO -->
     <section id="sec-profile" style="display: none;">
       <h2>Mi Perfil</h2>
       
-      <div id="profile-preview-card" class="profile-card" style="margin-bottom: 25px;">
+      <div id="profile-preview-card" class="profile-card" style="margin-bottom: 30px;">
         <div id="prev-banner" class="profile-banner"></div>
         <div class="profile-header-info">
           <div id="prev-avatar" class="profile-avatar"></div>
@@ -271,7 +325,7 @@
         </div>
       </div>
 
-      <div class="modal-content" style="max-width: 600px; margin: 0 auto;">
+      <div class="modal-content" style="max-width: 100%;">
         <h3 style="margin-top:0; color: var(--accent-color);">Editar Datos del Perfil</h3>
         <form onsubmit="updateProfile(event)">
           <div class="form-group">
@@ -280,25 +334,25 @@
           </div>
           <div class="form-group">
             <label for="profile-flag">Bandera / País (Emoji):</label>
-            <input type="text" id="profile-flag" placeholder="Ej: 🇲🇽, 🇪🇸, 🇦🇷, 🇨🇱" maxlength="5">
+            <input type="text" id="profile-flag" placeholder="Ej: 🇲🇽, 🇪🇸, 🇦🇷" maxlength="5">
           </div>
           <div class="form-group">
             <label for="profile-bio-input">Biografía / Redes / Frase:</label>
             <textarea id="profile-bio-input" rows="3" placeholder="Ej: GD Player & Level Decorator"></textarea>
           </div>
           <div class="form-group">
-            <label for="profile-avatar-input">URL de la Foto de Perfil (Avatar Image URL):</label>
+            <label for="profile-avatar-input">URL de la Foto de Perfil (Avatar):</label>
             <input type="url" id="profile-avatar-input" placeholder="https://i.imgur.com/...">
           </div>
           <div class="form-group">
-            <label for="profile-banner-input">URL del Banner / Fondo (Banner Image URL):</label>
+            <label for="profile-banner-input">URL del Banner / Fondo:</label>
             <input type="url" id="profile-banner-input" placeholder="https://i.imgur.com/...">
           </div>
           <div class="form-group">
             <label for="profile-hardest-select">Hardest Principal:</label>
             <select id="profile-hardest-select"><option value="">Ninguno</option></select>
           </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%;">Guardar Perfil</button>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Guardar Cambios</button>
         </form>
       </div>
     </section>
@@ -310,16 +364,19 @@
 
     <section id="sec-rules" style="display: none;">
       <h2>Reglas de la Lista</h2>
-      <ul>
-        <li>Todas las completaciones deben incluir prueba en video con clicks/taps audibles.</li>
-        <li>No se permite el uso de hacks o modificadores de velocidad ilegales.</li>
-      </ul>
+      <div class="modal-content" style="max-width: 100%;">
+        <ul style="line-height: 1.6; margin: 0; padding-left: 20px;">
+          <li>Todas las completaciones deben incluir prueba en video con clicks/taps audibles y unlisted/public en YouTube.</li>
+          <li>No se permite el uso de hacks de físicas modificadas o trampas ilegales.</li>
+          <li>Los récords serán revisados por los moderadores antes de publicarse oficialmente en el Leaderboard.</li>
+        </ul>
+      </div>
     </section>
   </main>
 
   <div id="auth-modal" class="modal" style="display: none;">
     <div class="modal-content">
-      <h2 style="margin-top: 0;">Iniciar Sesión</h2>
+      <h2 style="margin-top: 0; color: var(--accent-color);">Iniciar Sesión</h2>
       <form onsubmit="handleAuth(event)">
         <div class="form-group">
           <label>Correo Electrónico:</label>
@@ -329,9 +386,9 @@
           <label>Contraseña:</label>
           <input type="password" id="auth-password" required>
         </div>
-        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 5px;">Entrar / Registrarse</button>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Entrar / Registrarse</button>
       </form>
-      <button onclick="closeAuthModal()" style="width: 100%; margin-top: 10px; background: transparent; color: var(--text-muted); border: none;">Cerrar</button>
+      <button onclick="closeAuthModal()" style="width: 100%; margin-top: 10px; background: transparent; color: var(--text-muted); border: none; cursor: pointer;">Cerrar</button>
     </div>
   </div>
 
@@ -340,7 +397,7 @@
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI";
     
     const DISCORD_PRIVATE_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966150277275758/guiKF0NBX1D-b3qOcjGBLx5ClICBA0ToBImdoItn-yAEea3qUIBFOx-xcnKZsXjBV1nG";
-    const DISCORD_PUBLIC_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966408369573978/Ugr9Q5-zH5gC6mdprG1AuLKToJeiRnojRVZyQYOaiyvuX_12OMNsKH9aqonGqNVCuXKW";
+    const DISCORD_PUBLIC_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966408369573978/Ugr9Q5-zH5gC6mdprG1AuLKToJeiRnojRVZyQYOaiyvuX_12OMNsKH9aqonGqNVCuXKW"; 
     const ADMIN_EMAIL = "fermisael.051178@gmail.com";
 
     let supabaseClient = null;
@@ -384,22 +441,20 @@
       }
     }
 
-    // Calcular puntos de un usuario basándose en sus récords aprobados
-   async function calculateUserPoints(userId) {
+    async function calculateUserPoints(userId) {
       const { data: subs } = await supabaseClient.from("submissions").select("*").eq("user_id", userId).eq("status", "approved");
       let totalPoints = 0;
       if (subs && globalLevels.length > 0) {
         subs.forEach(sub => {
           const lvl = globalLevels.find(l => l.id == sub.level_id);
           if (lvl) {
-            // Si el nivel tiene puntos asignados los usa, si no, por defecto otorga 50 puntos
             totalPoints += (lvl.points || 50);
           }
         });
       }
       return totalPoints;
     }
-    
+
     async function fetchUserData(user) {
       currentUser = user;
       const authBtn = document.getElementById("auth-btn");
@@ -503,7 +558,6 @@
       }
     }
 
-    // VER PERFIL DE OTRO USUARIO
     async function viewUserProfile(userId) {
       showSection('view-profile');
       const container = document.getElementById("external-profile-container");
@@ -562,12 +616,12 @@
         }
 
         container.innerHTML = globalLevels.map(l => `
-          <div style="background: var(--card-bg); padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+          <div class="list-item">
             <div>
               <strong style="color: var(--accent-color); font-size: 1.1rem;">#${l.position} - ${l.name}</strong>
-              <p style="margin: 4px 0 0; font-size: 0.85rem; color: var(--text-muted);">Creador: ${l.creator || 'Desconocido'}</p>
+              <p style="margin: 4px 0 0; font-size: 0.85rem; color: var(--text-muted);">Creador: ${l.creator || 'Desconocido'} | 🏆 ${l.points || 50} pts</p>
             </div>
-            ${l.video_url ? `<a href="${l.video_url}" target="_blank" class="btn" style="text-decoration: none; font-size: 0.8rem;">Video</a>` : ''}
+            ${l.video_url ? `<a href="${l.video_url}" target="_blank" class="btn" style="text-decoration: none; font-size: 0.8rem;">Ver Nivel</a>` : ''}
           </div>
         `).join("");
 
@@ -578,8 +632,7 @@
       } catch (err) { console.error(err); }
     }
 
-    // LEADERBOARD ORDENADO POR PUNTUACIÓN DE MAYOR A MENOR
-   async function loadLeaderboard() {
+    async function loadLeaderboard() {
       const container = document.getElementById("leaderboard-container");
       if (!container || !supabaseClient) return;
 
@@ -597,7 +650,6 @@
           return;
         }
 
-        // Calcular puntos sumando los puntos específicos de cada nivel completado
         let leaderboardData = [];
         for (const p of profiles) {
           const userSubs = subs.filter(s => s.user_id === p.id);
@@ -618,17 +670,16 @@
           });
         }
 
-        // Ordenar de mayor a menor puntaje
         leaderboardData.sort((a, b) => b.points - a.points);
 
         container.innerHTML = leaderboardData.map((user, index) => {
           const rank = index + 1;
           const rankClass = rank === 1 ? 'rank-1' : '';
           return `
-            <div class="leaderboard-item">
+            <div class="list-item">
               <div style="display: flex; align-items: center;">
                 <span class="rank-badge ${rankClass}">#${rank}</span>
-                <span style="font-size: 1.1rem; margin-right: 8px;">${user.flag}</span>
+                <span style="font-size: 1.1rem; margin-right: 10px;">${user.flag}</span>
                 <div>
                   <strong class="clickable-player" onclick="viewUserProfile('${user.id}')" style="font-size: 1.1rem;">${user.username}</strong>
                   <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--text-muted);">${user.completions} demon(s) completados</p>
@@ -671,11 +722,11 @@
           const playerName = profileMap[sub.user_id] || "Jugador anónimo";
           const levelName = levelMap[sub.level_id] || "Nivel desconocido";
           return `
-            <div style="background: var(--card-bg); padding: 15px; margin-bottom: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
-              <p style="margin: 0 0 5px;"><strong>Jugador:</strong> ${playerName}</p>
-              <p style="margin: 0 0 5px;"><strong>Nivel:</strong> ${levelName} (${sub.percent}%) | <strong>Hz:</strong> ${sub.hz}</p>
-              <p style="margin: 0 0 10px;"><strong>Prueba:</strong> <a href="${sub.video_url}" target="_blank" style="color: var(--accent-color);">Ver Video</a></p>
-              <div style="display: flex; gap: 10px;">
+            <div class="list-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+              <p style="margin: 0;"><strong>Jugador:</strong> ${playerName}</p>
+              <p style="margin: 0;"><strong>Nivel:</strong> ${levelName} (${sub.percent}%) | <strong>Hz:</strong> ${sub.hz}</p>
+              <p style="margin: 0;"><strong>Prueba:</strong> <a href="${sub.video_url}" target="_blank" style="color: var(--accent-color);">Ver Video</a></p>
+              <div style="display: flex; gap: 10px; margin-top: 5px;">
                 <button onclick="updateSubmissionStatus('${sub.id}', 'approved')" class="btn btn-success">Aceptar</button>
                 <button onclick="updateSubmissionStatus('${sub.id}', 'rejected')" class="btn btn-danger">Rechazar</button>
               </div>
