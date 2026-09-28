@@ -7,7 +7,7 @@
   <style>
     :root {
       --bg-color: #121212;
-      --card-bg: #1e1e1e;
+      --card-bg: #1a1a1a;
       --accent-color: #00adb5;
       --text-color: #eeeeee;
       --text-muted: #888888;
@@ -15,9 +15,7 @@
       --danger-color: #e53935;
       --success-color: #43a047;
     }
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       background-color: var(--bg-color);
       color: var(--text-color);
@@ -59,18 +57,9 @@
       border: none;
       font-weight: bold;
     }
-    .btn-success {
-      background-color: var(--success-color);
-      color: #fff;
-      border: none;
-      font-weight: bold;
-    }
-    .btn-danger {
-      background-color: var(--danger-color);
-      color: #fff;
-      border: none;
-      font-weight: bold;
-    }
+    .btn-success { background-color: var(--success-color); color: #fff; border: none; font-weight: bold; }
+    .btn-danger { background-color: var(--danger-color); color: #fff; border: none; font-weight: bold; }
+    
     .modal {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -83,7 +72,7 @@
       padding: 20px;
       border-radius: 8px;
       width: 90%;
-      max-width: 400px;
+      max-width: 450px;
       border: 1px solid var(--border-color);
     }
     .form-group {
@@ -95,13 +84,76 @@
       font-size: 0.85rem;
       color: var(--text-muted);
     }
-    input, select {
+    input, select, textarea {
       width: 100%;
       padding: 10px;
       background: #2a2a2a;
       border: 1px solid var(--border-color);
       color: var(--text-color);
       border-radius: 4px;
+    }
+
+    /* ESTILO DE PERFIL TIPO BUFFER TEAM */
+    .profile-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      max-width: 600px;
+      margin: 0 auto;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .profile-banner {
+      height: 140px;
+      background-size: cover;
+      background-position: center;
+      background-color: #2a2a2a;
+      position: relative;
+    }
+    .profile-header-info {
+      padding: 0 20px 20px;
+      position: relative;
+      margin-top: -45px;
+    }
+    .profile-avatar {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      border: 4px solid var(--card-bg);
+      background-size: cover;
+      background-position: center;
+      background-color: #333;
+    }
+    .profile-name {
+      font-size: 1.4rem;
+      font-weight: bold;
+      margin: 10px 0 2px;
+      color: #fff;
+    }
+    .profile-bio {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 15px;
+      white-space: pre-line;
+    }
+    .profile-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      background: rgba(0,0,0,0.3);
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+    .stat-box label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: block;
+    }
+    .stat-box span {
+      font-size: 1rem;
+      font-weight: bold;
+      color: var(--accent-color);
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js"></script>
@@ -126,16 +178,12 @@
   <main>
     <section id="sec-levels">
       <h2>Top Demon Levels</h2>
-      <div id="levels-container">
-        <p style="color: var(--text-muted);">Cargando niveles...</p>
-      </div>
+      <div id="levels-container"><p style="color: var(--text-muted);">Cargando niveles...</p></div>
     </section>
 
     <section id="sec-leaderboard" style="display: none;">
       <h2>Tabla de Clasificación</h2>
-      <div id="leaderboard-container">
-        <p style="color: var(--text-muted);">Cargando récords aprobados...</p>
-      </div>
+      <div id="leaderboard-container"><p style="color: var(--text-muted);">Cargando récords aprobados...</p></div>
     </section>
 
     <section id="sec-submit" style="display: none;">
@@ -143,57 +191,80 @@
       <form id="record-form" onsubmit="handleRecordSubmit(event)">
         <div class="form-group">
           <label for="username-display">Jugador:</label>
-          <input type="text" id="username-display" placeholder="Inicia sesión para enviar un récord" required disabled>
+          <input type="text" id="username-display" disabled required>
         </div>
-
         <div class="form-group">
           <label for="level-select">Nivel:</label>
           <select id="level-select" required></select>
         </div>
-
         <div class="form-group">
           <label for="percent">Porcentaje (%):</label>
           <input type="number" id="percent" min="1" max="100" value="100" required>
         </div>
-
         <div class="form-group">
           <label for="hz">Tasa de Refresco (Hz):</label>
           <input type="number" id="hz" value="240" required>
         </div>
-
         <div class="form-group">
           <label for="video-url">URL de Video / Prueba (YouTube):</label>
           <input type="url" id="video-url" placeholder="https://www.youtube.com/watch?v=..." required>
         </div>
-
         <button type="submit" id="submit-record-btn" class="btn btn-primary" style="width: 100%; margin-top: 10px;" disabled>Enviar Récord</button>
       </form>
     </section>
 
-    <!-- SECCIÓN DE PERFIL -->
+    <!-- SECCIÓN DE PERFIL AVANZADO -->
     <section id="sec-profile" style="display: none;">
-      <h2>Configuración de Perfil</h2>
-      <div class="modal-content" style="max-width: 500px; margin: 0 auto;">
+      <h2>Mi Perfil</h2>
+      
+      <!-- Vista previa de la tarjeta -->
+      <div id="profile-preview-card" class="profile-card" style="margin-bottom: 25px;">
+        <div id="prev-banner" class="profile-banner"></div>
+        <div class="profile-header-info">
+          <div id="prev-avatar" class="profile-avatar"></div>
+          <div id="prev-name" class="profile-name">Cargando...</div>
+          <div id="prev-bio" class="profile-bio">Sin biografía configurada.</div>
+          <div class="profile-stats">
+            <div class="stat-box">
+              <label>🏆 Hardest Principal</label>
+              <span id="prev-hardest">Ninguno</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulario de edición -->
+      <div class="modal-content" style="max-width: 600px; margin: 0 auto;">
+        <h3 style="margin-top:0; color: var(--accent-color);">Editar Datos del Perfil</h3>
         <form onsubmit="updateProfile(event)">
           <div class="form-group">
-            <label for="profile-email">Correo:</label>
-            <input type="text" id="profile-email" disabled style="opacity: 0.7;">
+            <label for="profile-username">Nombre de Usuario (Geometry Dash):</label>
+            <input type="text" id="profile-username" required>
           </div>
           <div class="form-group">
-            <label for="profile-username">Nombre de Usuario (Geometry Dash):</label>
-            <input type="text" id="profile-username" required placeholder="Tu nombre en el juego">
+            <label for="profile-bio-input">Biografía / Redes / Frase:</label>
+            <textarea id="profile-bio-input" rows="3" placeholder="Ej: 🇪🇸 | GD Player & Level Decorator"></textarea>
           </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%;">Guardar Cambios</button>
+          <div class="form-group">
+            <label for="profile-avatar-input">URL de la Foto de Perfil (Avatar Image URL):</label>
+            <input type="url" id="profile-avatar-input" placeholder="https://i.imgur.com/...">
+          </div>
+          <div class="form-group">
+            <label for="profile-banner-input">URL del Banner / Fondo (Banner Image URL):</label>
+            <input type="url" id="profile-banner-input" placeholder="https://i.imgur.com/...">
+          </div>
+          <div class="form-group">
+            <label for="profile-hardest-select">Hardest Principal:</label>
+            <select id="profile-hardest-select"><option value="">Ninguno</option></select>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Guardar Perfil</button>
         </form>
       </div>
     </section>
 
-    <!-- SECCIÓN DE ADMINISTRACIÓN -->
     <section id="sec-admin" style="display: none;">
-      <h2>Panel de Administración (Revisiones)</h2>
-      <div id="admin-submissions-container">
-        <p style="color: var(--text-muted);">Cargando envíos pendientes...</p>
-      </div>
+      <h2>Panel de Administración</h2>
+      <div id="admin-submissions-container"><p style="color: var(--text-muted);">Cargando envíos pendientes...</p></div>
     </section>
 
     <section id="sec-rules" style="display: none;">
@@ -201,7 +272,6 @@
       <ul>
         <li>Todas las completaciones deben incluir prueba en video con clicks/taps audibles.</li>
         <li>No se permite el uso de hacks o modificadores de velocidad ilegales.</li>
-        <li>Los videos deben mostrar el intento completo sin cortes.</li>
       </ul>
     </section>
   </main>
@@ -209,19 +279,17 @@
   <!-- Modal de Autenticación -->
   <div id="auth-modal" class="modal" style="display: none;">
     <div class="modal-content">
-      <h2 id="modal-title" style="margin-top: 0;">Iniciar Sesión</h2>
+      <h2 style="margin-top: 0;">Iniciar Sesión</h2>
       <form onsubmit="handleAuth(event)">
         <div class="form-group">
-          <label for="auth-email">Correo Electrónico:</label>
-          <input type="email" id="auth-email" placeholder="tu@correo.com" required>
+          <label>Correo Electrónico:</label>
+          <input type="email" id="auth-email" required>
         </div>
-
         <div class="form-group">
-          <label for="auth-password">Contraseña:</label>
-          <input type="password" id="auth-password" placeholder="••••••••" required>
+          <label>Contraseña:</label>
+          <input type="password" id="auth-password" required>
         </div>
-
-        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; margin-top: 5px;">Entrar / Registrarse</button>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 5px;">Entrar / Registrarse</button>
       </form>
       <button onclick="closeAuthModal()" style="width: 100%; margin-top: 10px; background: transparent; color: var(--text-muted); border: none;">Cerrar</button>
     </div>
@@ -232,30 +300,20 @@
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI";
     
     const DISCORD_PRIVATE_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966150277275758/guiKF0NBX1D-b3qOcjGBLx5ClICBA0ToBImdoItn-yAEea3qUIBFOx-xcnKZsXjBV1nG";
-    const DISCORD_PUBLIC_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966408369573978/Ugr9Q5-zH5gC6mdprG1AuLKToJeiRnojRVZyQYOaiyvuX_12OMNsKH9aqonGqNVCuXKW"; // ⚠️ Tu webhook público
-
-    const ADMIN_EMAIL = "fermisael.051178@gmail.com"; // ⚠️ Tu correo
+    const DISCORD_PUBLIC_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966408369573978/Ugr9Q5-zH5gC6mdprG1AuLKToJeiRnojRVZyQYOaiyvuX_12OMNsKH9aqonGqNVCuXKW"; 
+    const ADMIN_EMAIL = "fermisael.051178@gmail.com";
 
     let supabaseClient = null;
     let currentUser = null;
     let currentUsername = "";
+    let globalLevels = [];
 
     try {
-      if (window.supabase) {
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-      }
-    } catch (e) {
-      console.error("Error inicializando Supabase:", e);
-    }
+      if (window.supabase) supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    } catch (e) { console.error(e); }
 
-    function openAuthModal() {
-      document.getElementById("auth-modal").style.display = "flex";
-    }
-
-    function closeAuthModal() {
-      document.getElementById("auth-modal").style.display = "none";
-    }
-
+    function openAuthModal() { document.getElementById("auth-modal").style.display = "flex"; }
+    function closeAuthModal() { document.getElementById("auth-modal").style.display = "none"; }
     function showSection(sec) {
       ["levels", "leaderboard", "submit", "profile", "admin", "rules"].forEach(s => {
         const el = document.getElementById(`sec-${s}`);
@@ -266,31 +324,20 @@
 
     async function handleAuth(e) {
       e.preventDefault();
-      if (!supabaseClient) return;
-
       const email = document.getElementById("auth-email").value;
       const password = document.getElementById("auth-password").value;
 
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
-          const crear = confirm("Esa cuenta no existe o la contraseña es incorrecta. ¿Deseas registrar este correo como usuario nuevo?");
-          if (crear) {
+          if (confirm("Cuenta no encontrada. ¿Deseas registrar este correo?")) {
             const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({ email, password });
-            if (signUpError) {
-              alert("Error al registrar: " + signUpError.message);
-            } else {
-              alert("¡Cuenta registrada con éxito!");
-              await fetchUserData(signUpData.user);
-              closeAuthModal();
-            }
+            if (signUpError) alert("Error: " + signUpError.message);
+            else { alert("¡Registrado!"); await fetchUserData(signUpData.user); closeAuthModal(); }
           }
-        } else {
-          alert("Error: " + error.message);
-        }
+        } else alert("Error: " + error.message);
       } else {
-        alert("¡Sesión iniciada correctamente!");
+        alert("¡Sesión iniciada!");
         await fetchUserData(data.user);
         closeAuthModal();
       }
@@ -305,10 +352,9 @@
       const profileNavBtn = document.getElementById("profile-nav-btn");
 
       if (user) {
-        // Buscar el perfil en la tabla profiles
         const { data: profile } = await supabaseClient
           .from("profiles")
-          .select("username")
+          .select("*")
           .eq("id", user.id)
           .single();
 
@@ -316,19 +362,19 @@
 
         if (authBtn) {
           authBtn.textContent = currentUsername;
-          authBtn.onclick = () => {
-            if (confirm("¿Deseas cerrar sesión?")) {
-              supabaseClient.auth.signOut();
-              location.reload();
-            }
-          };
+          authBtn.onclick = () => { if (confirm("¿Cerrar sesión?")) { supabaseClient.auth.signOut(); location.reload(); } };
         }
         if (usernameDisplay) usernameDisplay.value = currentUsername;
         if (submitBtn) submitBtn.disabled = false;
         if (profileNavBtn) profileNavBtn.style.display = "block";
 
-        document.getElementById("profile-email").value = user.email;
+        // Rellenar formulario y tarjeta de perfil
         document.getElementById("profile-username").value = currentUsername;
+        document.getElementById("profile-bio-input").value = profile?.bio || "";
+        document.getElementById("profile-avatar-input").value = profile?.avatar_url || "";
+        document.getElementById("profile-banner-input").value = profile?.banner_url || "";
+
+        renderProfileCard(profile, currentUsername);
 
         if (adminNavBtn && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
           adminNavBtn.style.display = "block";
@@ -336,43 +382,65 @@
       }
     }
 
+    function renderProfileCard(profile, username) {
+      document.getElementById("prev-name").textContent = username;
+      document.getElementById("prev-bio").textContent = profile?.bio || "Sin biografía configurada.";
+      
+      const bannerEl = document.getElementById("prev-banner");
+      if (profile?.banner_url) bannerEl.style.backgroundImage = `url('${profile.banner_url}')`;
+      
+      const avatarEl = document.getElementById("prev-avatar");
+      if (profile?.avatar_url) avatarEl.style.backgroundImage = `url('${profile.avatar_url}')`;
+
+      if (profile?.hardest_level_id) {
+        const hardestLvl = globalLevels.find(l => l.id === profile.hardest_level_id);
+        document.getElementById("prev-hardest").textContent = hardestLvl ? `#${hardestLvl.position} - ${hardestLvl.name}` : "Desconocido";
+      } else {
+        document.getElementById("prev-hardest").textContent = "Ninguno";
+      }
+    }
+
     async function updateProfile(e) {
       e.preventDefault();
       if (!currentUser) return;
 
-      const newUsername = document.getElementById("profile-username").value.trim();
-      if (!newUsername) return alert("El nombre de usuario no puede estar vacío.");
+      const updates = {
+        username: document.getElementById("profile-username").value.trim(),
+        bio: document.getElementById("profile-bio-input").value.trim(),
+        avatar_url: document.getElementById("profile-avatar-input").value.trim(),
+        banner_url: document.getElementById("profile-banner-input").value.trim(),
+        hardest_level_id: document.getElementById("profile-hardest-select").value || null,
+        updated_at: new Date()
+      };
 
-      const { error } = await supabaseClient
-        .from("profiles")
-        .update({ username: newUsername })
-        .eq("id", currentUser.id);
+      const { error } = await supabaseClient.from("profiles").update(updates).eq("id", currentUser.id);
 
-      if (error) {
-        alert("Error al actualizar (quizás el nombre ya esté en uso): " + error.message);
-      } else {
-        alert("¡Perfil actualizado con éxito!");
-        currentUsername = newUsername;
+      if (error) alert("Error al actualizar: " + error.message);
+      else {
+        alert("¡Perfil guardado con éxito!");
+        currentUsername = updates.username;
         document.getElementById("auth-btn").textContent = currentUsername;
         document.getElementById("username-display").value = currentUsername;
-        showSection('levels');
+        renderProfileCard(updates, currentUsername);
       }
     }
 
     async function loadLevels() {
       const container = document.getElementById("levels-container");
       const select = document.getElementById("level-select");
+      const profileHardestSelect = document.getElementById("profile-hardest-select");
       if (!container || !supabaseClient) return;
 
       try {
         const { data: levels } = await supabaseClient.from("levels").select("*").order("position", { ascending: true });
+        globalLevels = levels || [];
 
-        if (!levels || levels.length === 0) {
-          container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles agregados en Supabase.</p>";
+        if (globalLevels.length === 0) {
+          container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles.</p>";
           return;
         }
 
-        container.innerHTML = levels.map(l => `
+        container.innerHTML = globalLevels.map(l => `
           <div style="background: var(--card-bg); padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
             <div>
               <strong style="color: var(--accent-color); font-size: 1.1rem;">#${l.position} - ${l.name}</strong>
@@ -382,12 +450,11 @@
           </div>
         `).join("");
 
-        if (select) {
-          select.innerHTML = levels.map(l => `<option value="${l.id}">${l.name}</option>`).join("");
-        }
-      } catch (err) {
-        container.innerHTML = "<p style='color: var(--text-muted);'>Error al cargar niveles.</p>";
-      }
+        const optionsHtml = globalLevels.map(l => `<option value="${l.id}">#${l.position} - ${l.name}</option>`).join("");
+        if (select) select.innerHTML = optionsHtml;
+        if (profileHardestSelect) profileHardestSelect.innerHTML = `<option value="">Ninguno</option>` + optionsHtml;
+
+      } catch (err) { console.error(err); }
     }
 
     async function loadLeaderboard() {
@@ -401,19 +468,9 @@
           supabaseClient.from("profiles").select("*")
         ]);
 
-        const submissions = subRes.data || [];
-        const levels = lvlRes.data || [];
-        const profiles = profRes.data || [];
-
-        const levelMap = {};
-        levels.forEach(l => { levelMap[l.id] = l.name; });
-
-        const profileMap = {};
-        profiles.forEach(p => { profileMap[p.id] = p.username; });
-
-        const approvedSubs = submissions.filter(sub => 
-          sub.status && sub.status.toLowerCase() === "approved"
-        );
+        const approvedSubs = (subRes.data || []).filter(sub => sub.status && sub.status.toLowerCase() === "approved");
+        const levelMap = {}; (lvlRes.data || []).forEach(l => { levelMap[l.id] = `#${l.position} ${l.name}`; });
+        const profileMap = {}; (profRes.data || []).forEach(p => { profileMap[p.id] = p.username; });
 
         if (approvedSubs.length === 0) {
           container.innerHTML = "<p style='color: var(--text-muted);'>No hay récords aprobados aún.</p>";
@@ -421,21 +478,19 @@
         }
 
         container.innerHTML = approvedSubs.map(sub => {
-          const levelName = levelMap[sub.level_id] || "Nivel desconocido";
           const playerName = profileMap[sub.user_id] || "Jugador anónimo";
+          const levelName = levelMap[sub.level_id] || "Nivel desconocido";
           return `
             <div style="background: var(--card-bg); padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
               <div>
-                <strong style="color: var(--accent-color); font-size: 1.1rem;">${playerName}</strong> - ${levelName} (${sub.percent}%)
+                <strong style="color: var(--accent-color); font-size: 1.1rem;">${playerName}</strong> completó ${levelName} (${sub.percent}%)
                 <p style="margin: 4px 0 0; font-size: 0.85rem; color: var(--text-muted);">HZ: ${sub.hz}</p>
               </div>
               ${sub.video_url ? `<a href="${sub.video_url}" target="_blank" class="btn" style="text-decoration: none; font-size: 0.8rem;">Ver Prueba</a>` : ''}
             </div>
           `;
         }).join("");
-      } catch (err) {
-        container.innerHTML = "<p style='color: var(--text-muted);'>Error al cargar la tabla de clasificación.</p>";
-      }
+      } catch (err) { console.error(err); }
     }
 
     async function loadAdminSubmissions() {
@@ -449,28 +504,18 @@
           supabaseClient.from("profiles").select("*")
         ]);
 
-        const submissions = subRes.data || [];
-        const levels = lvlRes.data || [];
-        const profiles = profRes.data || [];
-
-        const levelMap = {};
-        levels.forEach(l => { levelMap[l.id] = l.name; });
-
-        const profileMap = {};
-        profiles.forEach(p => { profileMap[p.id] = p.username; });
-
-        const pendingSubs = submissions.filter(sub => 
-          sub.status && sub.status.toLowerCase() === "pending"
-        );
+        const pendingSubs = (subRes.data || []).filter(sub => sub.status && sub.status.toLowerCase() === "pending");
+        const levelMap = {}; (lvlRes.data || []).forEach(l => { levelMap[l.id] = l.name; });
+        const profileMap = {}; (profRes.data || []).forEach(p => { profileMap[p.id] = p.username; });
 
         if (pendingSubs.length === 0) {
-          container.innerHTML = "<p style='color: var(--text-muted);'>No hay récords pendientes de revisión.</p>";
+          container.innerHTML = "<p style='color: var(--text-muted);'>No hay envíos pendientes.</p>";
           return;
         }
 
         container.innerHTML = pendingSubs.map(sub => {
-          const levelName = levelMap[sub.level_id] || "Nivel desconocido";
           const playerName = profileMap[sub.user_id] || "Jugador anónimo";
+          const levelName = levelMap[sub.level_id] || "Nivel desconocido";
           return `
             <div style="background: var(--card-bg); padding: 15px; margin-bottom: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
               <p style="margin: 0 0 5px;"><strong>Jugador:</strong> ${playerName}</p>
@@ -483,124 +528,40 @@
             </div>
           `;
         }).join("");
-      } catch (err) {
-        container.innerHTML = "<p style='color: var(--text-muted);'>Error al cargar panel de administración.</p>";
-      }
+      } catch (err) { console.error(err); }
     }
 
     async function updateSubmissionStatus(id, newStatus, playerName, levelName, percent, hz, videoUrl) {
-      const { error } = await supabaseClient
-        .from("submissions")
-        .update({ status: newStatus })
-        .eq("id", id);
-
-      if (error) {
-        alert("Error al actualizar: " + error.message);
-        return;
-      }
-
-      const isApproved = newStatus === 'approved';
-      const payload = {
-        embeds: [{
-          title: isApproved ? "✅ ¡Récord Aprobado!" : "❌ ¡Récord Rechazado!",
-          color: isApproved ? 65280 : 16711685,
-          fields: [
-            { name: "Jugador", value: playerName, inline: true },
-            { name: "Nivel", value: levelName, inline: true },
-            { name: "Porcentaje", value: `${percent}%`, inline: true },
-            { name: "Tasa de refresco", value: `${hz} Hz`, inline: true },
-            { name: "Video / Prueba", value: videoUrl }
-          ],
-          footer: { text: isApproved ? "Demon List Bot • Récord Verificado" : "Demon List Bot • Récord No Aprobado" },
-          timestamp: new Date().toISOString()
-        }]
-      };
-
-      try {
-        let res = await fetch(DISCORD_PUBLIC_WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-          await fetch("https://corsproxy.io/?" + encodeURIComponent(DISCORD_PUBLIC_WEBHOOK_URL), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-        }
-      } catch (err) {
-        console.error("Error al notificar al canal público:", err);
-      }
-
-      alert(`Récord ${isApproved ? 'aprobado' : 'rechazado'} y notificado.`);
+      await supabaseClient.from("submissions").update({ status: newStatus }).eq("id", id);
+      alert(`Récord ${newStatus === 'approved' ? 'aprobado' : 'rechazado'}.`);
       loadAdminSubmissions();
       loadLeaderboard();
     }
 
     async function handleRecordSubmit(e) {
       e.preventDefault();
-      if (!currentUser) return alert("Debes iniciar sesión para subir un récord.");
+      if (!currentUser) return alert("Inicia sesión primero.");
 
       const levelSelect = document.getElementById("level-select");
-      const level_name = levelSelect.options[levelSelect.selectedIndex].text;
       const level_id = levelSelect.value;
       const percent = document.getElementById("percent").value;
       const hz = document.getElementById("hz").value;
       const video_url = document.getElementById("video-url").value;
 
-      const { data, error } = await supabaseClient.from("submissions").insert([
+      const { error } = await supabaseClient.from("submissions").insert([
         { user_id: currentUser.id, level_id, percent, hz, video_url, status: "pending" }
       ]);
 
-      if (error) {
-        alert("Error al enviar récord: " + error.message);
-        return;
+      if (error) alert("Error: " + error.message);
+      else {
+        alert("¡Récord enviado!");
+        document.getElementById("record-form").reset();
       }
-
-      const payload = {
-        embeds: [{
-          title: "🏆 ¡Nuevo Récord Pendiente!",
-          color: 3066993,
-          fields: [
-            { name: "Jugador", value: currentUsername, inline: true },
-            { name: "Nivel", value: level_name, inline: true },
-            { name: "Porcentaje", value: `${percent}%`, inline: true },
-            { name: "Tasa de refresco", value: `${hz} Hz`, inline: true },
-            { name: "Video / Prueba", value: video_url }
-          ],
-          footer: { text: "Demon List Bot • Pendiente de revisión" },
-          timestamp: new Date().toISOString()
-        }]
-      };
-
-      try {
-        let res = await fetch(DISCORD_PRIVATE_WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-          await fetch("https://corsproxy.io/?" + encodeURIComponent(DISCORD_PRIVATE_WEBHOOK_URL), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-        }
-      } catch (err) {
-        console.error("Error al notificar al canal privado:", err);
-      }
-
-      alert("¡Récord enviado con éxito!");
-      document.getElementById("record-form").reset();
     }
 
     document.addEventListener("DOMContentLoaded", async () => {
-      loadLevels();
+      await loadLevels();
       loadLeaderboard();
-
       if (supabaseClient) {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (user) await fetchUserData(user);
