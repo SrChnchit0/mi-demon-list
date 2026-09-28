@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Demon List con Récords</title>
+  <title>Demon List</title>
   <link rel="stylesheet" href="styles.css">
+  <!-- Carga de la librería cliente de Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -23,9 +25,9 @@
       <div id="list-container"></div>
     </section>
 
-    <!-- Pestaña 2: Tabla de Posiciones -->
+    <!-- Pestaña 2: Leaderboard -->
     <section id="tab-leaderboard" class="tab-content">
-      <h2>Tabla de Jugadores</h2>
+      <h2>Tabla de Posiciones</h2>
       <table class="leaderboard-table">
         <thead>
           <tr>
@@ -44,7 +46,7 @@
       <h2>Enviar tu Récord</h2>
       <form id="record-form" onsubmit="submitRecord(event)">
         <label>Nombre de usuario en GD:</label>
-        <input type="text" id="username" required placeholder="Tu nombre">
+        <input type="text" id="username" required placeholder="Tu nombre en Geometry Dash">
 
         <label>Nivel:</label>
         <select id="level-select" required></select>
