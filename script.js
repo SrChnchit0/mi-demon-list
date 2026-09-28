@@ -1,6 +1,5 @@
-// Tus claves de conexión a Supabase
 const SUPABASE_URL = "https://jdvgdgiomrbmlxvvjvhd.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI"; // Pegar aquí la clave pública muy larga
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI"; // Asegúrate de mantener tu anon key aquí
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -11,18 +10,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     const response = await fetch("levels.json");
     levelsData = await response.json();
     
-    // Obtener récords aprobados de Supabase
+    // Obtener récords aprobados para niveles y leaderboard
     const approvedRecords = await fetchApprovedRecords();
 
     renderLevels(levelsData, approvedRecords);
     renderLeaderboard(levelsData, approvedRecords);
     populateLevelSelect(levelsData);
+    
+    // Cargar la lista completa dePrevious Submissions (AREDL)
+    loadPreviousSubmissions();
   } catch (error) {
-    console.error("Error al cargar la lista o los récords:", error);
+    console.error("Error al cargar datos:", error);
   }
 });
 
-// Obtener solo récords con estado 'approved' desde Supabase
 async function fetchApprovedRecords() {
   const { data, error } = await _supabase
     .from('records')
@@ -36,7 +37,41 @@ async function fetchApprovedRecords() {
   return data || [];
 }
 
-// Cambiar de pestañas
+// Cargar todas las entregas para la sección Previous Submissions
+async function loadPreviousSubmissions() {
+  const container = document.getElementById("submissions-list");
+  if (!container) return;
+
+  const { data, error } = await _supabase
+    .from('records')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(10); // Mostrar los últimos 10 envíos
+
+  if (error || !data || data.length === 0) {
+    container.innerHTML = "<p style='color: #777;'>No hay envíos recientes.</p>";
+    return;
+  }
+
+  container.innerHTML = data.map(sub => {
+    const dateFormatted = sub.created_at ? new Date(sub.created_at).toLocaleDateString('es-ES') : "Reciente";
+    const statusClass = sub.status === 'approved' ? 'status-approved' : (sub.status === 'rejected' ? 'status-rejected' : 'status-pending');
+    const statusText = sub.status === 'approved' ? 'ACCEPTED' : sub.status.toUpperCase();
+
+    return `
+      <div class="submission-card">
+        <div class="submission-info">
+          <strong>${sub.level_name} (${sub.percent}%)</strong>
+          <span>Jugador: ${sub.username} | ${sub.hz}Hz | Enviado el: ${dateFormatted}</span>
+        </div>
+        <div>
+          <span class="status-badge ${statusClass}">${statusText}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
 function switchTab(tabName) {
   document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -47,7 +82,6 @@ function switchTab(tabName) {
   }
 }
 
-// Renderizar niveles en pantalla
 function renderLevels(levels, dbRecords) {
   const container = document.getElementById("list-container");
   container.innerHTML = "";
@@ -55,7 +89,6 @@ function renderLevels(levels, dbRecords) {
   levels.sort((a, b) => a.position - b.position);
 
   levels.forEach(level => {
-    // Combinar récords locales de levels.json y aprobados de Supabase
     const jsonRecords = level.records || [];
     const supabaseMatch = dbRecords.filter(r => r.level_name === level.name && r.percent === 100)
       .map(r => ({ user: r.username, hz: r.hz, video: r.video_url }));
@@ -94,11 +127,9 @@ function renderLevels(levels, dbRecords) {
   });
 }
 
-// Calcular tabla de puntos
 function renderLeaderboard(levels, dbRecords) {
   const players = {};
 
-  // Procesar récords de levels.json
   levels.forEach(level => {
     const jsonRecords = level.records || [];
     jsonRecords.forEach(record => {
@@ -110,7 +141,6 @@ function renderLeaderboard(levels, dbRecords) {
     });
   });
 
-  // Procesar récords aprobados de Supabase
   dbRecords.forEach(record => {
     if (record.percent === 100) {
       const level = levels.find(l => l.name === record.level_name);
@@ -137,13 +167,11 @@ function renderLeaderboard(levels, dbRecords) {
   `).join("");
 }
 
-// Llenar selector de niveles en el formulario
 function populateLevelSelect(levels) {
   const select = document.getElementById("level-select");
   select.innerHTML = levels.map(l => `<option value="${l.name}">${l.name} (#${l.position})</option>`).join("");
 }
 
-// Enviar récord a Supabase
 async function submitRecord(e) {
   e.preventDefault();
   
@@ -168,5 +196,8 @@ async function submitRecord(e) {
     msg.style.color = "#2ecc71";
     msg.innerText = `¡Gracias ${username}! Tu récord en ${level_name} fue enviado a revisión.`;
     document.getElementById("record-form").reset();
+    
+    // Recargar la lista de Previous Submissions inmediatamente
+    loadPreviousSubmissions();
   }
 }
