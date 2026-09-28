@@ -12,6 +12,8 @@
       --text-color: #eeeeee;
       --text-muted: #888888;
       --border-color: #333333;
+      --danger-color: #e53935;
+      --success-color: #43a047;
     }
     * {
       box-sizing: border-box;
@@ -53,6 +55,18 @@
     }
     nav button.btn-primary, .btn-primary {
       background-color: var(--accent-color);
+      color: #fff;
+      border: none;
+      font-weight: bold;
+    }
+    .btn-success {
+      background-color: var(--success-color);
+      color: #fff;
+      border: none;
+      font-weight: bold;
+    }
+    .btn-danger {
+      background-color: var(--danger-color);
       color: #fff;
       border: none;
       font-weight: bold;
@@ -103,6 +117,8 @@
       <button onclick="showSection('leaderboard')">Leaderboard</button>
       <button onclick="showSection('submit')">Subir Récord</button>
       <button onclick="showSection('rules')">Reglas</button>
+      <!-- Botón Admin oculto por defecto -->
+      <button id="admin-nav-btn" onclick="showSection('admin')" style="display: none; background: #333; border-color: var(--accent-color);">Admin</button>
       <button id="auth-btn" class="btn-primary" onclick="openAuthModal()">Iniciar Sesión</button>
     </nav>
   </header>
@@ -154,6 +170,14 @@
       </form>
     </section>
 
+    <!-- SECCIÓN DE ADMINISTRACIÓN -->
+    <section id="sec-admin" style="display: none;">
+      <h2>Panel de Administración (Revisiones)</h2>
+      <div id="admin-submissions-container">
+        <p style="color: var(--text-muted);">Cargando envíos pendientes...</p>
+      </div>
+    </section>
+
     <section id="sec-rules" style="display: none;">
       <h2>Reglas de la Lista</h2>
       <ul>
@@ -191,6 +215,9 @@
     
     const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966150277275758/guiKF0NBX1D-b3qOcjGBLx5ClICBA0ToBImdoItn-yAEea3qUIBFOx-xcnKZsXjBV1nG";
 
+    // ⚠️ CAMBIA ESTE CORREO POR EL TUYO CON EL QUE INICIAS SESIÓN EN LA PÁGINA
+    const ADMIN_EMAIL = "tu-correo@admin.com"; 
+
     let supabaseClient = null;
     let currentUser = null;
 
@@ -211,10 +238,11 @@
     }
 
     function showSection(sec) {
-      ["levels", "leaderboard", "submit", "rules"].forEach(s => {
+      ["levels", "leaderboard", "submit", "admin", "rules"].forEach(s => {
         const el = document.getElementById(`sec-${s}`);
         if (el) el.style.display = (s === sec) ? "block" : "none";
       });
+      if (sec === 'admin') loadAdminSubmissions();
     }
 
     async function handleAuth(e) {
@@ -254,6 +282,7 @@
       const authBtn = document.getElementById("auth-btn");
       const userInput = document.getElementById("username");
       const submitBtn = document.getElementById("submit-record-btn");
+      const adminNavBtn = document.getElementById("admin-nav-btn");
 
       if (user) {
         if (authBtn) {
@@ -267,6 +296,11 @@
         }
         if (userInput) userInput.value = user.email;
         if (submitBtn) submitBtn.disabled = false;
+
+        // Mostrar botón de Admin solo si el correo coincide
+        if (adminNavBtn && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+          adminNavBtn.style.display = "block";
+        }
       }
     }
 
@@ -352,6 +386,111 @@
         console.error("Excepción al cargar el leaderboard:", err);
         container.innerHTML = "<p style='color: var(--text-muted);'>Error inesperado al cargar la tabla.</p>";
       }
+    }
+
+    async function loadAdminSubmissions() {
+      const container = document.getElementById("admin-submissions-container");
+      if (!container || !supabaseClient) return;
+
+      try {
+        const [subRes, lvlRes] = await Promise.all([
+          supabaseClient.from("submissions").select("*"),
+          supabaseClient.from("levels").select("*")
+        ]);
+
+        const submissions = subRes.data || [];
+        const levels = lvlRes.data || [];
+        const levelMap = {};
+        levels.forEach(l => { levelMap[l.id] = l.name; });
+
+        // Mostrar pendientes
+        const pendingSubs = submissions.filter(sub => 
+          sub.status && sub.status.toLowerCase() === "pending"
+        );
+
+        if (pendingSubs.length === 0) {
+          container.innerHTML = "<p style='color: var(--text-muted);'>No hay récords pendientes de revisión.</p>";
+          return;
+        }
+
+        container.innerHTML = pendingSubs.map(sub => {
+          const levelName = levelMap[sub.level_id] || "Nivel desconocido";
+          return `
+            <div style="background: var(--card-bg); padding: 15px; margin-bottom: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+              <p style="margin: 0 0 5px;"><strong>Nivel:</strong> ${levelName}</p>
+              <p style="margin: 0 0 5px;"><strong>Porcentaje:</strong> ${sub.percent}% | <strong>Hz:</strong> ${sub.hz}</p>
+              <p style="margin: 0 0 10px;"><strong>Prueba:</strong> <a href="${sub.video_url}" target="_blank" style="color: var(--accent-color);">Ver Video</a></p>
+              <div style="display: flex; gap: 10px;">
+                <button onclick="updateSubmissionStatus('${sub.id}', 'approved', '${levelName}', ${sub.percent}, ${sub.hz}, '${sub.video_url}')" class="btn btn-success">Aceptar</button>
+                <button onclick="updateSubmissionStatus('${sub.id}', 'rejected', '${levelName}', ${sub.percent}, ${sub.hz}, '${sub.video_url}')" class="btn btn-danger">Rechazar</button>
+              </div>
+            </div>
+          `;
+        }).join("");
+      } catch (err) {
+        container.innerHTML = "<p style='color: var(--text-muted);'>Error al cargar panel de administración.</p>";
+      }
+    }
+
+    async function updateSubmissionStatus(id, newStatus, levelName, percent, hz, videoUrl) {
+      // 1. Actualizar en Supabase
+      const { error } = await supabaseClient
+        .from("submissions")
+        .update({ status: newStatus })
+        .eq("id", id);
+
+      if (error) {
+        alert("Error al actualizar: " + error.message);
+        return;
+      }
+
+      // 2. Si se aceptó, mandar alerta a Discord
+      if (newStatus === 'approved') {
+        const payload = {
+          embeds: [{
+            title: "✅ ¡Récord Aprobado!",
+            color: 65280, // Verde
+            fields: [
+              { name: "Nivel", value: levelName, inline: true },
+              { name: "Porcentaje", value: `${percent}%`, inline: true },
+              { name: "Tasa de refresco", value: `${hz} Hz`, inline: true },
+              { name: "Video / Prueba", value: videoUrl }
+            ],
+            footer: { text: "Demon List Bot • Récord Verificado" },
+            timestamp: new Date().toISOString()
+          }]
+        };
+
+        try {
+          let res = await fetch(DISCORD_WEBHOOK_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+
+          if (!res.ok) {
+            await fetch("https://corsproxy.io/?" + encodeURIComponent(DISCORD_WEBHOOK_URL), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+          }
+        } catch (err) {
+          try {
+            await fetch("https://corsproxy.io/?" + encodeURIComponent(DISCORD_WEBHOOK_URL), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+          } catch (proxyErr) {
+            console.error("Error al notificar en Discord:", proxyErr);
+          }
+        }
+      }
+
+      alert(`Récord ${newStatus === 'approved' ? 'aprobado y notificado' : 'rechazado'} con éxito.`);
+      loadAdminSubmissions();
+      loadLeaderboard();
     }
 
     async function handleRecordSubmit(e) {
