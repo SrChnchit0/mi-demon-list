@@ -13,6 +13,9 @@
       --text-muted: #888888;
       --border-color: #333333;
     }
+    * {
+      box-sizing: border-box;
+    }
     body {
       background-color: var(--bg-color);
       color: var(--text-color);
@@ -27,26 +30,39 @@
       border-bottom: 1px solid var(--border-color);
       padding-bottom: 15px;
       margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
     }
-    nav button {
+    h1 {
+      margin: 0;
+      color: var(--accent-color);
+      font-size: 1.5rem;
+    }
+    nav {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    nav button, .btn {
       background: none;
       border: 1px solid var(--border-color);
       color: var(--text-color);
       padding: 8px 12px;
-      margin-left: 5px;
       border-radius: 4px;
       cursor: pointer;
     }
-    nav button.btn-primary {
+    nav button.btn-primary, .btn-primary {
       background-color: var(--accent-color);
       color: #fff;
       border: none;
+      font-weight: bold;
     }
     .modal {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.85);
       display: flex; justify-content: center; align-items: center;
+      z-index: 1000;
     }
     .modal-content {
       background: var(--card-bg);
@@ -54,6 +70,24 @@
       border-radius: 8px;
       width: 90%;
       max-width: 400px;
+      border: 1px solid var(--border-color);
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      background: #2a2a2a;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      border-radius: 4px;
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js"></script>
@@ -77,54 +111,93 @@
     <section id="sec-levels">
       <h2>Top Demon Levels</h2>
       <div id="levels-container">
-        <p style="color: var(--text-muted);">Cargando niveles desde Supabase...</p>
+        <p style="color: var(--text-muted);">Cargando niveles...</p>
       </div>
     </section>
 
     <section id="sec-leaderboard" style="display: none;">
       <h2>Tabla de Clasificación</h2>
-      <div id="leaderboard-container"><p>Sin récords aún.</p></div>
+      <div id="leaderboard-container">
+        <p style="color: var(--text-muted);">Sin récords registrados aún.</p>
+      </div>
     </section>
 
     <section id="sec-submit" style="display: none;">
       <h2>Enviar Récord</h2>
-      <p>Inicia sesión para poder enviar récords.</p>
+      <form id="record-form" onsubmit="handleRecordSubmit(event)">
+        <div class="form-group">
+          <label for="username">Usuario:</label>
+          <input type="text" id="username" placeholder="Inicia sesión para enviar un récord" required disabled>
+        </div>
+
+        <div class="form-group">
+          <label for="level-select">Nivel:</label>
+          <select id="level-select" required></select>
+        </div>
+
+        <div class="form-group">
+          <label for="percent">Porcentaje (%):</label>
+          <input type="number" id="percent" min="1" max="100" value="100" required>
+        </div>
+
+        <div class="form-group">
+          <label for="hz">Tasa de Refresco (Hz):</label>
+          <input type="number" id="hz" value="240" required>
+        </div>
+
+        <div class="form-group">
+          <label for="video-url">URL de Video / Prueba (YouTube):</label>
+          <input type="url" id="video-url" placeholder="https://www.youtube.com/watch?v=..." required>
+        </div>
+
+        <button type="submit" id="submit-record-btn" class="btn btn-primary" style="width: 100%; margin-top: 10px;" disabled>Enviar Récord</button>
+      </form>
     </section>
 
     <section id="sec-rules" style="display: none;">
       <h2>Reglas de la Lista</h2>
       <ul>
-        <li>Clicks / taps audibles obligatorios.</li>
-        <li>No hacks o modificadores de velocidad.</li>
+        <li>Todas las completaciones deben incluir prueba en video con clicks/taps audibles.</li>
+        <li>No se permite el uso de hacks o modificadores de velocidad ilegales.</li>
+        <li>Los videos deben mostrar el intento completo sin cortes.</li>
       </ul>
     </section>
   </main>
 
+  <!-- Modal de Autenticación -->
   <div id="auth-modal" class="modal" style="display: none;">
     <div class="modal-content">
-      <h2 id="modal-title">Iniciar Sesión</h2>
+      <h2 id="modal-title" style="margin-top: 0;">Iniciar Sesión</h2>
       <form onsubmit="handleAuth(event)">
-        <input type="email" id="auth-email" placeholder="Correo" required style="width: 100%; margin-bottom: 10px; padding: 8px;">
-        <input type="password" id="auth-password" placeholder="Contraseña" required style="width: 100%; margin-bottom: 10px; padding: 8px;">
-        <button type="submit" style="width: 100%; padding: 10px; background: var(--accent-color); color: white; border: none; border-radius: 4px;">Entrar</button>
+        <div class="form-group">
+          <label for="auth-email">Correo Electrónico:</label>
+          <input type="email" id="auth-email" placeholder="tu@correo.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="auth-password">Contraseña:</label>
+          <input type="password" id="auth-password" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; margin-top: 5px;">Entrar / Registrarse</button>
       </form>
-      <button onclick="closeAuthModal()" style="margin-top: 10px; background: transparent; color: #888; border: none;">Cerrar</button>
+      <button onclick="closeAuthModal()" style="width: 100%; margin-top: 10px; background: transparent; color: var(--text-muted); border: none;">Cerrar</button>
     </div>
   </div>
 
   <script>
-    console.log("Iniciando script principal...");
     const SUPABASE_URL = "https://jdvgdgiomrbmlxvvjvhd.supabase.co"; 
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI";
 
     let supabaseClient = null;
+    let currentUser = null;
+
     try {
       if (window.supabase) {
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        console.log("Supabase cliente inicializado correctamente.");
       }
     } catch (e) {
-      console.error("Error iniciando Supabase:", e);
+      console.error("Error inicializando Supabase:", e);
     }
 
     function openAuthModal() {
@@ -142,57 +215,125 @@
       });
     }
 
+    async function handleAuth(e) {
+      e.preventDefault();
+      if (!supabaseClient) return alert("Error de conexión con Supabase.");
+
+      const email = document.getElementById("auth-email").value;
+      const password = document.getElementById("auth-password").value;
+
+      // Intentar iniciar sesión primero
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        // Si las credenciales no son válidas, preguntar si desea crear la cuenta
+        if (error.message.includes("Invalid login credentials")) {
+          const crear = confirm("Esa cuenta no existe o la contraseña es incorrecta. ¿Deseas registrar este correo como usuario nuevo?");
+          if (crear) {
+            const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({ email, password });
+            if (signUpError) {
+              alert("Error al registrar: " + signUpError.message);
+            } else {
+              alert("¡Cuenta registrada con éxito!");
+              updateUserUI(signUpData.user);
+              closeAuthModal();
+            }
+          }
+        } else {
+          alert("Error: " + error.message);
+        }
+      } else {
+        alert("¡Sesión iniciada correctamente!");
+        updateUserUI(data.user);
+        closeAuthModal();
+      }
+    }
+
+    function updateUserUI(user) {
+      currentUser = user;
+      const authBtn = document.getElementById("auth-btn");
+      const userInput = document.getElementById("username");
+      const submitBtn = document.getElementById("submit-record-btn");
+
+      if (user) {
+        if (authBtn) {
+          authBtn.textContent = user.email.split('@')[0];
+          authBtn.onclick = () => {
+            if (confirm("¿Deseas cerrar sesión?")) {
+              supabaseClient.auth.signOut();
+              location.reload();
+            }
+          };
+        }
+        if (userInput) userInput.value = user.email;
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    }
+
     async function loadLevels() {
       const container = document.getElementById("levels-container");
+      const select = document.getElementById("level-select");
       if (!container) return;
 
       if (!supabaseClient) {
-        container.innerHTML = "<p style='color: red;'>Error de conexión con la librería de Supabase.</p>";
+        container.innerHTML = "<p style='color: var(--text-muted);'>Cargando datos...</p>";
         return;
       }
 
       try {
         const { data: levels, error } = await supabaseClient.from("levels").select("*").order("position", { ascending: true });
-        
-        if (error) {
-          console.error("Error de la BD:", error);
-          container.innerHTML = `<p style="color: red;">Error BD: ${error.message}</p>`;
-          return;
-        }
 
-        if (!levels || levels.length === 0) {
-          container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles agregados en la tabla 'levels' de Supabase.</p>";
+        if (error || !levels || levels.length === 0) {
+          container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles agregados en la base de datos de Supabase.</p>";
           return;
         }
 
         container.innerHTML = levels.map(l => `
-          <div style="background: var(--card-bg); padding: 12px; margin-bottom: 8px; border-radius: 6px;">
-            <strong style="color: var(--accent-color);">#${l.position} - ${l.name}</strong>
-            <p style="margin: 4px 0 0; font-size: 0.85rem; color: var(--text-muted);">Creador: ${l.creator || 'Desconocido'}</p>
+          <div style="background: var(--card-bg); padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong style="color: var(--accent-color); font-size: 1.1rem;">#${l.position} - ${l.name}</strong>
+              <p style="margin: 4px 0 0; font-size: 0.85rem; color: var(--text-muted);">Creador: ${l.creator || 'Desconocido'}</p>
+            </div>
+            ${l.video_url ? `<a href="${l.video_url}" target="_blank" class="btn" style="text-decoration: none; font-size: 0.8rem;">Video</a>` : ''}
           </div>
         `).join("");
+
+        if (select) {
+          select.innerHTML = levels.map(l => `<option value="${l.id}">${l.name}</option>`).join("");
+        }
       } catch (err) {
-        console.error("Error al cargar niveles:", err);
-        container.innerHTML = "<p style='color: red;'>Excepción al conectar con la base de datos.</p>";
+        container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles cargados.</p>";
       }
     }
 
-    async function handleAuth(e) {
+    async function handleRecordSubmit(e) {
       e.preventDefault();
-      const email = document.getElementById("auth-email").value;
-      const password = document.getElementById("auth-password").value;
-      
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) alert("Error: " + error.message);
-      else {
-        alert("¡Sesión iniciada!");
-        closeAuthModal();
+      if (!currentUser) return alert("Debes iniciar sesión para subir un récord.");
+
+      const level_id = document.getElementById("level-select").value;
+      const percent = document.getElementById("percent").value;
+      const hz = document.getElementById("hz").value;
+      const video_url = document.getElementById("video-url").value;
+
+      const { data, error } = await supabaseClient.from("submissions").insert([
+        { user_id: currentUser.id, level_id, percent, hz, video_url, status: "pending" }
+      ]);
+
+      if (error) {
+        alert("Error al enviar récord: " + error.message);
+      } else {
+        alert("¡Récord enviado a revisión con éxito!");
+        document.getElementById("record-form").reset();
       }
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      console.log("DOM Cargado. Cargando datos...");
+    document.addEventListener("DOMContentLoaded", async () => {
       loadLevels();
+
+      if (supabaseClient) {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (user) updateUserUI(user);
+      }
     });
   </script>
 </body>
