@@ -299,8 +299,10 @@
     const SUPABASE_URL = "https://jdvgdgiomrbmlxvvjvhd.supabase.co"; 
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI";
     
-    const DISCORD_PRIVATE_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966150277275758/guiKF0NBX1D-b3qOcjGBLx5ClICBA0ToBImdoItn-yAEea3qUIBFOx-xcnKZsXjBV1nG";
-    const DISCORD_PUBLIC_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966408369573978/Ugr9Q5-zH5gC6mdprG1AuLKToJeiRnojRVZyQYOaiyvuX_12OMNsKH9aqonGqNVCuXKW"; 
+    // Webhooks separados para canales diferentes
+    const DISCORD_PRIVATE_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966150277275758/guiKF0NBX1D-b3qOcjGBLx5ClICBA0ToBImdoItn-yAEea3qUIBFOx-xcnKZsXjBV1nG"; // Para nuevos récords pendientes
+    const DISCORD_PUBLIC_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966408369573978/Ugr9Q5-zH5gC6mdprG1AuLKToJeiRnojRVZyQYOaiyvuX_12OMNsKH9aqonGqNVCuXKW"; // Para aprobados / rechazados
+
     const ADMIN_EMAIL = "fermisael.051178@gmail.com";
 
     let supabaseClient = null;
@@ -352,11 +354,21 @@
       const profileNavBtn = document.getElementById("profile-nav-btn");
 
       if (user) {
-        const { data: profile } = await supabaseClient
+        let { data: profile } = await supabaseClient
           .from("profiles")
           .select("*")
           .eq("id", user.id)
           .single();
+
+        if (!profile) {
+          const defaultUsername = user.email.split('@')[0];
+          const { data: newProfile } = await supabaseClient
+            .from("profiles")
+            .insert([{ id: user.id, username: defaultUsername }])
+            .select()
+            .single();
+          profile = newProfile;
+        }
 
         currentUsername = profile ? profile.username : user.email.split('@')[0];
 
@@ -368,11 +380,14 @@
         if (submitBtn) submitBtn.disabled = false;
         if (profileNavBtn) profileNavBtn.style.display = "block";
 
-        // Rellenar formulario y tarjeta de perfil
         document.getElementById("profile-username").value = currentUsername;
         document.getElementById("profile-bio-input").value = profile?.bio || "";
         document.getElementById("profile-avatar-input").value = profile?.avatar_url || "";
         document.getElementById("profile-banner-input").value = profile?.banner_url || "";
+        
+        if (profile?.hardest_level_id) {
+          document.getElementById("profile-hardest-select").value = profile.hardest_level_id;
+        }
 
         renderProfileCard(profile, currentUsername);
 
@@ -388,12 +403,14 @@
       
       const bannerEl = document.getElementById("prev-banner");
       if (profile?.banner_url) bannerEl.style.backgroundImage = `url('${profile.banner_url}')`;
+      else bannerEl.style.backgroundImage = "none";
       
       const avatarEl = document.getElementById("prev-avatar");
       if (profile?.avatar_url) avatarEl.style.backgroundImage = `url('${profile.avatar_url}')`;
+      else avatarEl.style.backgroundImage = "none";
 
       if (profile?.hardest_level_id) {
-        const hardestLvl = globalLevels.find(l => l.id === profile.hardest_level_id);
+        const hardestLvl = globalLevels.find(l => l.id == profile.hardest_level_id);
         document.getElementById("prev-hardest").textContent = hardestLvl ? `#${hardestLvl.position} - ${hardestLvl.name}` : "Desconocido";
       } else {
         document.getElementById("prev-hardest").textContent = "Ninguno";
@@ -462,24 +479,29 @@
       if (!container || !supabaseClient) return;
 
       try {
-        const [subRes, lvlRes, profRes] = await Promise.all([
-          supabaseClient.from("submissions").select("*"),
-          supabaseClient.from("levels").select("*"),
-          supabaseClient.from("profiles").select("*")
-        ]);
+        const { data: subs, error } = await supabaseClient
+          .from("submissions")
+          .select(`
+            *,
+            levels ( position, name ),
+            profiles ( username )
+          `)
+          .eq("status", "approved");
 
-        const approvedSubs = (subRes.data || []).filter(sub => sub.status && sub.status.toLowerCase() === "approved");
-        const levelMap = {}; (lvlRes.data || []).forEach(l => { levelMap[l.id] = `#${l.position} ${l.name}`; });
-        const profileMap = {}; (profRes.data || []).forEach(p => { profileMap[p.id] = p.username; });
+        if (error) {
+          console.error(error);
+          container.innerHTML = "<p style='color: var(--danger-color);'>Error al cargar el leaderboard.</p>";
+          return;
+        }
 
-        if (approvedSubs.length === 0) {
+        if (!subs || subs.length === 0) {
           container.innerHTML = "<p style='color: var(--text-muted);'>No hay récords aprobados aún.</p>";
           return;
         }
 
-        container.innerHTML = approvedSubs.map(sub => {
-          const playerName = profileMap[sub.user_id] || "Jugador anónimo";
-          const levelName = levelMap[sub.level_id] || "Nivel desconocido";
+        container.innerHTML = subs.map(sub => {
+          const playerName = sub.profiles?.username || "Jugador anónimo";
+          const levelName = sub.levels ? `#${sub.levels.position} ${sub.levels.name}` : "Nivel desconocido";
           return `
             <div style="background: var(--card-bg); padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
               <div>
@@ -522,8 +544,8 @@
               <p style="margin: 0 0 5px;"><strong>Nivel:</strong> ${levelName} (${sub.percent}%) | <strong>Hz:</strong> ${sub.hz}</p>
               <p style="margin: 0 0 10px;"><strong>Prueba:</strong> <a href="${sub.video_url}" target="_blank" style="color: var(--accent-color);">Ver Video</a></p>
               <div style="display: flex; gap: 10px;">
-                <button onclick="updateSubmissionStatus('${sub.id}', 'approved', '${playerName}', '${levelName}', ${sub.percent}, ${sub.hz}, '${sub.video_url}')" class="btn btn-success">Aceptar</button>
-                <button onclick="updateSubmissionStatus('${sub.id}', 'rejected', '${playerName}', '${levelName}', ${sub.percent}, ${sub.hz}, '${sub.video_url}')" class="btn btn-danger">Rechazar</button>
+                <button onclick="updateSubmissionStatus('${sub.id}', 'approved')" class="btn btn-success">Aceptar</button>
+                <button onclick="updateSubmissionStatus('${sub.id}', 'rejected')" class="btn btn-danger">Rechazar</button>
               </div>
             </div>
           `;
@@ -531,8 +553,43 @@
       } catch (err) { console.error(err); }
     }
 
-    async function updateSubmissionStatus(id, newStatus, playerName, levelName, percent, hz, videoUrl) {
-      await supabaseClient.from("submissions").update({ status: newStatus }).eq("id", id);
+    // Funciones de envío a Discord separadas
+    async function sendPrivateWebhook(message) {
+      if (!DISCORD_PRIVATE_WEBHOOK_URL) return;
+      try {
+        await fetch(DISCORD_PRIVATE_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: message })
+        });
+      } catch (err) { console.error("Error webhook privado:", err); }
+    }
+
+    async function sendPublicWebhook(message) {
+      if (!DISCORD_PUBLIC_WEBHOOK_URL || DISCORD_PUBLIC_WEBHOOK_URL.includes("AQUÍ_PEGA")) return;
+      try {
+        await fetch(DISCORD_PUBLIC_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: message })
+        });
+      } catch (err) { console.error("Error webhook público:", err); }
+    }
+
+    async function updateSubmissionStatus(id, newStatus) {
+      const { data: updatedSub } = await supabaseClient.from("submissions").update({ status: newStatus }).eq("id", id).select().single();
+      
+      if (updatedSub) {
+        const lvl = globalLevels.find(l => l.id == updatedSub.level_id);
+        const levelName = lvl ? `#${lvl.position} ${lvl.name}` : "un nivel";
+        
+        if (newStatus === 'approved') {
+          await sendPublicWebhook(`✅ ¡Récord Aprobado! Un jugador ha completado **${levelName}** (${updatedSub.percent}%) a ${updatedSub.hz}Hz. [Ver Prueba](${updatedSub.video_url})`);
+        } else if (newStatus === 'rejected') {
+          await sendPublicWebhook(`❌ Récord No Aprobado para **${levelName}** (${updatedSub.percent}%).`);
+        }
+      }
+
       alert(`Récord ${newStatus === 'approved' ? 'aprobado' : 'rechazado'}.`);
       loadAdminSubmissions();
       loadLeaderboard();
@@ -556,6 +613,11 @@
       else {
         alert("¡Récord enviado!");
         document.getElementById("record-form").reset();
+        
+        // Esto solo llega al canal PRIVADO de staff
+        const lvl = globalLevels.find(l => l.id == level_id);
+        const levelName = lvl ? `#${lvl.position} ${lvl.name}` : "un nivel";
+        await sendPrivateWebhook(`📥 Nuevo envío pendiente de **${currentUsername}** para **${levelName}** (${percent}%, ${hz}Hz). [Ver Prueba](${video_url})`);
       }
     }
 
