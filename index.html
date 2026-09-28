@@ -311,17 +311,23 @@
       if (!container || !supabaseClient) return;
 
       try {
-        const { data: submissions, error } = await supabaseClient
-          .from("submissions")
-          .select("*, levels(name)");
+        const [subRes, lvlRes] = await Promise.all([
+          supabaseClient.from("submissions").select("*"),
+          supabaseClient.from("levels").select("*")
+        ]);
 
-        if (error) {
-          container.innerHTML = `<p style='color: var(--text-muted);'>Error al cargar: ${error.message}</p>`;
+        if (subRes.error) {
+          container.innerHTML = `<p style='color: var(--text-muted);'>Error al cargar récords: ${subRes.error.message}</p>`;
           return;
         }
 
-        // Filtra sin importar si está escrito como "Approved", "approved", etc.
-        const approvedSubs = (submissions || []).filter(sub => 
+        const submissions = subRes.data || [];
+        const levels = lvlRes.data || [];
+
+        const levelMap = {};
+        levels.forEach(l => { levelMap[l.id] = l.name; });
+
+        const approvedSubs = submissions.filter(sub => 
           sub.status && sub.status.toLowerCase() === "approved"
         );
 
@@ -330,17 +336,21 @@
           return;
         }
 
-        container.innerHTML = approvedSubs.map(sub => `
-          <div style="background: var(--card-bg); padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <strong style="color: var(--accent-color); font-size: 1.1rem;">${sub.levels ? sub.levels.name : 'Nivel'} - ${sub.percent}%</strong>
-              <p style="margin: 4px 0 0; font-size: 0.85rem; color: var(--text-muted);">HZ: ${sub.hz}</p>
+        container.innerHTML = approvedSubs.map(sub => {
+          const levelName = levelMap[sub.level_id] || "Nivel desconocido";
+          return `
+            <div style="background: var(--card-bg); padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong style="color: var(--accent-color); font-size: 1.1rem;">${levelName} - ${sub.percent}%</strong>
+                <p style="margin: 4px 0 0; font-size: 0.85rem; color: var(--text-muted);">HZ: ${sub.hz}</p>
+              </div>
+              ${sub.video_url ? `<a href="${sub.video_url}" target="_blank" class="btn" style="text-decoration: none; font-size: 0.8rem;">Ver Prueba</a>` : ''}
             </div>
-            ${sub.video_url ? `<a href="${sub.video_url}" target="_blank" class="btn" style="text-decoration: none; font-size: 0.8rem;">Ver Prueba</a>` : ''}
-          </div>
-        `).join("");
+          `;
+        }).join("");
       } catch (err) {
         console.error("Excepción al cargar el leaderboard:", err);
+        container.innerHTML = "<p style='color: var(--text-muted);'>Error inesperado al cargar la tabla.</p>";
       }
     }
 
