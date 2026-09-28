@@ -118,7 +118,7 @@
     <section id="sec-leaderboard" style="display: none;">
       <h2>Tabla de Clasificación</h2>
       <div id="leaderboard-container">
-        <p style="color: var(--text-muted);">Sin récords registrados aún.</p>
+        <p style="color: var(--text-muted);">Cargando récords aprobados...</p>
       </div>
     </section>
 
@@ -189,7 +189,6 @@
     const SUPABASE_URL = "https://jdvgdgiomrbmlxvvjvhd.supabase.co"; 
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI";
     
-    // URL del Webhook de Discord
     const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966150277275758/guiKF0NBX1D-b3qOcjGBLx5ClICBA0ToBImdoItn-yAEea3qUIBFOx-xcnKZsXjBV1nG";
 
     let supabaseClient = null;
@@ -307,6 +306,44 @@
       }
     }
 
+    async function loadLeaderboard() {
+      const container = document.getElementById("leaderboard-container");
+      if (!container || !supabaseClient) return;
+
+      try {
+        const { data: submissions, error } = await supabaseClient
+          .from("submissions")
+          .select("*, levels(name)");
+
+        if (error) {
+          container.innerHTML = `<p style='color: var(--text-muted);'>Error al cargar: ${error.message}</p>`;
+          return;
+        }
+
+        // Filtra sin importar si está escrito como "Approved", "approved", etc.
+        const approvedSubs = (submissions || []).filter(sub => 
+          sub.status && sub.status.toLowerCase() === "approved"
+        );
+
+        if (approvedSubs.length === 0) {
+          container.innerHTML = "<p style='color: var(--text-muted);'>No hay récords aprobados aún.</p>";
+          return;
+        }
+
+        container.innerHTML = approvedSubs.map(sub => `
+          <div style="background: var(--card-bg); padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong style="color: var(--accent-color); font-size: 1.1rem;">${sub.levels ? sub.levels.name : 'Nivel'} - ${sub.percent}%</strong>
+              <p style="margin: 4px 0 0; font-size: 0.85rem; color: var(--text-muted);">HZ: ${sub.hz}</p>
+            </div>
+            ${sub.video_url ? `<a href="${sub.video_url}" target="_blank" class="btn" style="text-decoration: none; font-size: 0.8rem;">Ver Prueba</a>` : ''}
+          </div>
+        `).join("");
+      } catch (err) {
+        console.error("Excepción al cargar el leaderboard:", err);
+      }
+    }
+
     async function handleRecordSubmit(e) {
       e.preventDefault();
       if (!currentUser) return alert("Debes iniciar sesión para subir un récord.");
@@ -318,7 +355,6 @@
       const hz = document.getElementById("hz").value;
       const video_url = document.getElementById("video-url").value;
 
-      // 1. Guardar en Supabase
       const { data, error } = await supabaseClient.from("submissions").insert([
         { user_id: currentUser.id, level_id, percent, hz, video_url, status: "pending" }
       ]);
@@ -328,7 +364,6 @@
         return;
       }
 
-      // 2. Notificar en Discord usando un proxy para saltar el bloqueo de CORS del navegador
       const payload = {
         embeds: [{
           title: "🏆 ¡Nuevo Récord Enviado!",
@@ -360,7 +395,6 @@
           });
         }
       } catch (err) {
-        console.log("Intentando vía proxy por posible restricción CORS...");
         try {
           await fetch("https://corsproxy.io/?" + encodeURIComponent(DISCORD_WEBHOOK_URL), {
             method: "POST",
@@ -372,12 +406,13 @@
         }
       }
 
-      alert("¡Récord enviado a la base de datos y notificado en Discord!");
+      alert("¡Récord enviado con éxito!");
       document.getElementById("record-form").reset();
     }
 
     document.addEventListener("DOMContentLoaded", async () => {
       loadLevels();
+      loadLeaderboard();
 
       if (supabaseClient) {
         const { data: { user } } = await supabaseClient.auth.getUser();
