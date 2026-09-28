@@ -117,7 +117,8 @@
       <button onclick="showSection('leaderboard')">Leaderboard</button>
       <button onclick="showSection('submit')">Subir Récord</button>
       <button onclick="showSection('rules')">Reglas</button>
-      <button id="admin-nav-btn" onclick="showSection('admin')" style="display: none; background: #333; border-color: var(--accent-color);">Admin</button>
+      <button id="profile-nav-btn" onclick="showSection('profile')" style="display: none; background: #333; border-color: var(--accent-color);">Mi Perfil</button>
+      <button id="admin-nav-btn" onclick="showSection('admin')" style="display: none; background: #333; border-color: var(--danger-color);">Admin</button>
       <button id="auth-btn" class="btn-primary" onclick="openAuthModal()">Iniciar Sesión</button>
     </nav>
   </header>
@@ -141,8 +142,8 @@
       <h2>Enviar Récord</h2>
       <form id="record-form" onsubmit="handleRecordSubmit(event)">
         <div class="form-group">
-          <label for="username">Usuario:</label>
-          <input type="text" id="username" placeholder="Inicia sesión para enviar un récord" required disabled>
+          <label for="username-display">Jugador:</label>
+          <input type="text" id="username-display" placeholder="Inicia sesión para enviar un récord" required disabled>
         </div>
 
         <div class="form-group">
@@ -167,6 +168,24 @@
 
         <button type="submit" id="submit-record-btn" class="btn btn-primary" style="width: 100%; margin-top: 10px;" disabled>Enviar Récord</button>
       </form>
+    </section>
+
+    <!-- SECCIÓN DE PERFIL -->
+    <section id="sec-profile" style="display: none;">
+      <h2>Configuración de Perfil</h2>
+      <div class="modal-content" style="max-width: 500px; margin: 0 auto;">
+        <form onsubmit="updateProfile(event)">
+          <div class="form-group">
+            <label for="profile-email">Correo:</label>
+            <input type="text" id="profile-email" disabled style="opacity: 0.7;">
+          </div>
+          <div class="form-group">
+            <label for="profile-username">Nombre de Usuario (Geometry Dash):</label>
+            <input type="text" id="profile-username" required placeholder="Tu nombre en el juego">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Guardar Cambios</button>
+        </form>
+      </div>
     </section>
 
     <!-- SECCIÓN DE ADMINISTRACIÓN -->
@@ -212,17 +231,14 @@
     const SUPABASE_URL = "https://jdvgdgiomrbmlxvvjvhd.supabase.co"; 
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI";
     
-    // 1. Webhook para el CANAL PRIVADO (cuando envían un récord pendiente)
     const DISCORD_PRIVATE_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966150277275758/guiKF0NBX1D-b3qOcjGBLx5ClICBA0ToBImdoItn-yAEea3qUIBFOx-xcnKZsXjBV1nG";
+    const DISCORD_PUBLIC_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966408369573978/Ugr9Q5-zH5gC6mdprG1AuLKToJeiRnojRVZyQYOaiyvuX_12OMNsKH9aqonGqNVCuXKW"; // ⚠️ Tu webhook público
 
-    // 2. Webhook para el CANAL PÚBLICO (cuando aceptas o rechazas un récord)
-    // ⚠️ Reemplaza esta URL con la del webhook de tu canal público
-    const DISCORD_PUBLIC_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966408369573978/Ugr9Q5-zH5gC6mdprG1AuLKToJeiRnojRVZyQYOaiyvuX_12OMNsKH9aqonGqNVCuXKW";
-    // ⚠️ ASEGÚRATE DE CAMBIAR ESTE CORREO POR EL TUYO EXACTO
-    const ADMIN_EMAIL = "fermisael.051178@gmail.com"; 
+    const ADMIN_EMAIL = "fermisael.051178@gmail.com"; // ⚠️ Tu correo
 
     let supabaseClient = null;
     let currentUser = null;
+    let currentUsername = "";
 
     try {
       if (window.supabase) {
@@ -241,7 +257,7 @@
     }
 
     function showSection(sec) {
-      ["levels", "leaderboard", "submit", "admin", "rules"].forEach(s => {
+      ["levels", "leaderboard", "submit", "profile", "admin", "rules"].forEach(s => {
         const el = document.getElementById(`sec-${s}`);
         if (el) el.style.display = (s === sec) ? "block" : "none";
       });
@@ -250,7 +266,7 @@
 
     async function handleAuth(e) {
       e.preventDefault();
-      if (!supabaseClient) return alert("Error de conexión con Supabase.");
+      if (!supabaseClient) return;
 
       const email = document.getElementById("auth-email").value;
       const password = document.getElementById("auth-password").value;
@@ -266,7 +282,7 @@
               alert("Error al registrar: " + signUpError.message);
             } else {
               alert("¡Cuenta registrada con éxito!");
-              updateUserUI(signUpData.user);
+              await fetchUserData(signUpData.user);
               closeAuthModal();
             }
           }
@@ -275,21 +291,31 @@
         }
       } else {
         alert("¡Sesión iniciada correctamente!");
-        updateUserUI(data.user);
+        await fetchUserData(data.user);
         closeAuthModal();
       }
     }
 
-    function updateUserUI(user) {
+    async function fetchUserData(user) {
       currentUser = user;
       const authBtn = document.getElementById("auth-btn");
-      const userInput = document.getElementById("username");
+      const usernameDisplay = document.getElementById("username-display");
       const submitBtn = document.getElementById("submit-record-btn");
       const adminNavBtn = document.getElementById("admin-nav-btn");
+      const profileNavBtn = document.getElementById("profile-nav-btn");
 
       if (user) {
+        // Buscar el perfil en la tabla profiles
+        const { data: profile } = await supabaseClient
+          .from("profiles")
+          .select("username")
+          .eq("id", user.id)
+          .single();
+
+        currentUsername = profile ? profile.username : user.email.split('@')[0];
+
         if (authBtn) {
-          authBtn.textContent = user.email.split('@')[0];
+          authBtn.textContent = currentUsername;
           authBtn.onclick = () => {
             if (confirm("¿Deseas cerrar sesión?")) {
               supabaseClient.auth.signOut();
@@ -297,8 +323,12 @@
             }
           };
         }
-        if (userInput) userInput.value = user.email;
+        if (usernameDisplay) usernameDisplay.value = currentUsername;
         if (submitBtn) submitBtn.disabled = false;
+        if (profileNavBtn) profileNavBtn.style.display = "block";
+
+        document.getElementById("profile-email").value = user.email;
+        document.getElementById("profile-username").value = currentUsername;
 
         if (adminNavBtn && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
           adminNavBtn.style.display = "block";
@@ -306,21 +336,39 @@
       }
     }
 
+    async function updateProfile(e) {
+      e.preventDefault();
+      if (!currentUser) return;
+
+      const newUsername = document.getElementById("profile-username").value.trim();
+      if (!newUsername) return alert("El nombre de usuario no puede estar vacío.");
+
+      const { error } = await supabaseClient
+        .from("profiles")
+        .update({ username: newUsername })
+        .eq("id", currentUser.id);
+
+      if (error) {
+        alert("Error al actualizar (quizás el nombre ya esté en uso): " + error.message);
+      } else {
+        alert("¡Perfil actualizado con éxito!");
+        currentUsername = newUsername;
+        document.getElementById("auth-btn").textContent = currentUsername;
+        document.getElementById("username-display").value = currentUsername;
+        showSection('levels');
+      }
+    }
+
     async function loadLevels() {
       const container = document.getElementById("levels-container");
       const select = document.getElementById("level-select");
-      if (!container) return;
-
-      if (!supabaseClient) {
-        container.innerHTML = "<p style='color: var(--text-muted);'>Cargando datos...</p>";
-        return;
-      }
+      if (!container || !supabaseClient) return;
 
       try {
-        const { data: levels, error } = await supabaseClient.from("levels").select("*").order("position", { ascending: true });
+        const { data: levels } = await supabaseClient.from("levels").select("*").order("position", { ascending: true });
 
-        if (error || !levels || levels.length === 0) {
-          container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles agregados en la base de datos de Supabase.</p>";
+        if (!levels || levels.length === 0) {
+          container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles agregados en Supabase.</p>";
           return;
         }
 
@@ -338,7 +386,7 @@
           select.innerHTML = levels.map(l => `<option value="${l.id}">${l.name}</option>`).join("");
         }
       } catch (err) {
-        container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles cargados.</p>";
+        container.innerHTML = "<p style='color: var(--text-muted);'>Error al cargar niveles.</p>";
       }
     }
 
@@ -347,21 +395,21 @@
       if (!container || !supabaseClient) return;
 
       try {
-        const [subRes, lvlRes] = await Promise.all([
+        const [subRes, lvlRes, profRes] = await Promise.all([
           supabaseClient.from("submissions").select("*"),
-          supabaseClient.from("levels").select("*")
+          supabaseClient.from("levels").select("*"),
+          supabaseClient.from("profiles").select("*")
         ]);
-
-        if (subRes.error) {
-          container.innerHTML = `<p style='color: var(--text-muted);'>Error al cargar récords: ${subRes.error.message}</p>`;
-          return;
-        }
 
         const submissions = subRes.data || [];
         const levels = lvlRes.data || [];
+        const profiles = profRes.data || [];
 
         const levelMap = {};
         levels.forEach(l => { levelMap[l.id] = l.name; });
+
+        const profileMap = {};
+        profiles.forEach(p => { profileMap[p.id] = p.username; });
 
         const approvedSubs = submissions.filter(sub => 
           sub.status && sub.status.toLowerCase() === "approved"
@@ -374,10 +422,11 @@
 
         container.innerHTML = approvedSubs.map(sub => {
           const levelName = levelMap[sub.level_id] || "Nivel desconocido";
+          const playerName = profileMap[sub.user_id] || "Jugador anónimo";
           return `
             <div style="background: var(--card-bg); padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
               <div>
-                <strong style="color: var(--accent-color); font-size: 1.1rem;">${levelName} - ${sub.percent}%</strong>
+                <strong style="color: var(--accent-color); font-size: 1.1rem;">${playerName}</strong> - ${levelName} (${sub.percent}%)
                 <p style="margin: 4px 0 0; font-size: 0.85rem; color: var(--text-muted);">HZ: ${sub.hz}</p>
               </div>
               ${sub.video_url ? `<a href="${sub.video_url}" target="_blank" class="btn" style="text-decoration: none; font-size: 0.8rem;">Ver Prueba</a>` : ''}
@@ -385,8 +434,7 @@
           `;
         }).join("");
       } catch (err) {
-        console.error("Excepción al cargar el leaderboard:", err);
-        container.innerHTML = "<p style='color: var(--text-muted);'>Error inesperado al cargar la tabla.</p>";
+        container.innerHTML = "<p style='color: var(--text-muted);'>Error al cargar la tabla de clasificación.</p>";
       }
     }
 
@@ -395,15 +443,21 @@
       if (!container || !supabaseClient) return;
 
       try {
-        const [subRes, lvlRes] = await Promise.all([
+        const [subRes, lvlRes, profRes] = await Promise.all([
           supabaseClient.from("submissions").select("*"),
-          supabaseClient.from("levels").select("*")
+          supabaseClient.from("levels").select("*"),
+          supabaseClient.from("profiles").select("*")
         ]);
 
         const submissions = subRes.data || [];
         const levels = lvlRes.data || [];
+        const profiles = profRes.data || [];
+
         const levelMap = {};
         levels.forEach(l => { levelMap[l.id] = l.name; });
+
+        const profileMap = {};
+        profiles.forEach(p => { profileMap[p.id] = p.username; });
 
         const pendingSubs = submissions.filter(sub => 
           sub.status && sub.status.toLowerCase() === "pending"
@@ -416,14 +470,15 @@
 
         container.innerHTML = pendingSubs.map(sub => {
           const levelName = levelMap[sub.level_id] || "Nivel desconocido";
+          const playerName = profileMap[sub.user_id] || "Jugador anónimo";
           return `
             <div style="background: var(--card-bg); padding: 15px; margin-bottom: 12px; border-radius: 6px; border: 1px solid var(--border-color);">
-              <p style="margin: 0 0 5px;"><strong>Nivel:</strong> ${levelName}</p>
-              <p style="margin: 0 0 5px;"><strong>Porcentaje:</strong> ${sub.percent}% | <strong>Hz:</strong> ${sub.hz}</p>
+              <p style="margin: 0 0 5px;"><strong>Jugador:</strong> ${playerName}</p>
+              <p style="margin: 0 0 5px;"><strong>Nivel:</strong> ${levelName} (${sub.percent}%) | <strong>Hz:</strong> ${sub.hz}</p>
               <p style="margin: 0 0 10px;"><strong>Prueba:</strong> <a href="${sub.video_url}" target="_blank" style="color: var(--accent-color);">Ver Video</a></p>
               <div style="display: flex; gap: 10px;">
-                <button onclick="updateSubmissionStatus('${sub.id}', 'approved', '${levelName}', ${sub.percent}, ${sub.hz}, '${sub.video_url}')" class="btn btn-success">Aceptar</button>
-                <button onclick="updateSubmissionStatus('${sub.id}', 'rejected', '${levelName}', ${sub.percent}, ${sub.hz}, '${sub.video_url}')" class="btn btn-danger">Rechazar</button>
+                <button onclick="updateSubmissionStatus('${sub.id}', 'approved', '${playerName}', '${levelName}', ${sub.percent}, ${sub.hz}, '${sub.video_url}')" class="btn btn-success">Aceptar</button>
+                <button onclick="updateSubmissionStatus('${sub.id}', 'rejected', '${playerName}', '${levelName}', ${sub.percent}, ${sub.hz}, '${sub.video_url}')" class="btn btn-danger">Rechazar</button>
               </div>
             </div>
           `;
@@ -433,7 +488,7 @@
       }
     }
 
-    async function updateSubmissionStatus(id, newStatus, levelName, percent, hz, videoUrl) {
+    async function updateSubmissionStatus(id, newStatus, playerName, levelName, percent, hz, videoUrl) {
       const { error } = await supabaseClient
         .from("submissions")
         .update({ status: newStatus })
@@ -444,13 +499,13 @@
         return;
       }
 
-      // Este mensaje se enviará al CANAL PÚBLICO
       const isApproved = newStatus === 'approved';
       const payload = {
         embeds: [{
           title: isApproved ? "✅ ¡Récord Aprobado!" : "❌ ¡Récord Rechazado!",
-          color: isApproved ? 65280 : 16711685, // Verde / Rojo
+          color: isApproved ? 65280 : 16711685,
           fields: [
+            { name: "Jugador", value: playerName, inline: true },
             { name: "Nivel", value: levelName, inline: true },
             { name: "Porcentaje", value: `${percent}%`, inline: true },
             { name: "Tasa de refresco", value: `${hz} Hz`, inline: true },
@@ -476,18 +531,10 @@
           });
         }
       } catch (err) {
-        try {
-          await fetch("https://corsproxy.io/?" + encodeURIComponent(DISCORD_PUBLIC_WEBHOOK_URL), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-        } catch (proxyErr) {
-          console.error("Error al notificar al canal público:", proxyErr);
-        }
+        console.error("Error al notificar al canal público:", err);
       }
 
-      alert(`Récord ${isApproved ? 'aprobado' : 'rechazado'} y notificado al canal público.`);
+      alert(`Récord ${isApproved ? 'aprobado' : 'rechazado'} y notificado.`);
       loadAdminSubmissions();
       loadLeaderboard();
     }
@@ -508,17 +555,16 @@
       ]);
 
       if (error) {
-        alert("Error al enviar récord a la base de datos: " + error.message);
+        alert("Error al enviar récord: " + error.message);
         return;
       }
 
-      // Este mensaje se enviará al CANAL PRIVADO DE ADMIN
       const payload = {
         embeds: [{
           title: "🏆 ¡Nuevo Récord Pendiente!",
           color: 3066993,
           fields: [
-            { name: "Usuario", value: currentUser.email, inline: true },
+            { name: "Jugador", value: currentUsername, inline: true },
             { name: "Nivel", value: level_name, inline: true },
             { name: "Porcentaje", value: `${percent}%`, inline: true },
             { name: "Tasa de refresco", value: `${hz} Hz`, inline: true },
@@ -544,15 +590,7 @@
           });
         }
       } catch (err) {
-        try {
-          await fetch("https://corsproxy.io/?" + encodeURIComponent(DISCORD_PRIVATE_WEBHOOK_URL), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-        } catch (proxyErr) {
-          console.error("Error al notificar al canal privado:", proxyErr);
-        }
+        console.error("Error al notificar al canal privado:", err);
       }
 
       alert("¡Récord enviado con éxito!");
@@ -565,7 +603,7 @@
 
       if (supabaseClient) {
         const { data: { user } } = await supabaseClient.auth.getUser();
-        if (user) updateUserUI(user);
+        if (user) await fetchUserData(user);
       }
     });
   </script>
