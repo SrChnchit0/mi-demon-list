@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Demon List</title>
   <link rel="stylesheet" href="styles.css">
-  <!-- Carga de la librería cliente de Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -16,11 +15,12 @@
       <button class="tab-btn active" onclick="switchTab('list')">Niveles</button>
       <button class="tab-btn" onclick="switchTab('leaderboard')">Leaderboard</button>
       <button class="tab-btn" onclick="switchTab('submit')">Subir Récord</button>
+      <button class="tab-btn" onclick="switchTab('rules')">Reglas</button>
     </nav>
   </header>
 
   <main class="container">
-    <!-- Pestaña 1: Lista de Niveles -->
+    <!-- Pestaña 1: Niveles -->
     <section id="tab-list" class="tab-content active">
       <div id="list-container"></div>
     </section>
@@ -41,12 +41,13 @@
       </table>
     </section>
 
-    <!-- Pestaña 3: Formulario para enviar récords -->
+    <!-- Pestaña 3: Subir Récord e Historial (AREDL Style) -->
     <section id="tab-submit" class="tab-content">
-      <h2>Enviar tu Récord</h2>
+      <h2>RECORD SUBMISSION</h2>
+      
       <form id="record-form" onsubmit="submitRecord(event)">
         <label>Nombre de usuario en GD:</label>
-        <input type="text" id="username" required placeholder="Tu nombre en Geometry Dash">
+        <input type="text" id="username" required placeholder="Tu nick">
 
         <label>Nivel:</label>
         <select id="level-select" required></select>
@@ -60,9 +61,33 @@
         <label>Link del video (YouTube/Twitch):</label>
         <input type="url" id="video-url" required placeholder="https://youtube.com/watch?v=...">
 
-        <button type="submit" class="btn-submit">Enviar Récord</button>
+        <button type="submit" class="btn-submit">Submit Record</button>
       </form>
       <p id="submit-msg" class="submit-msg"></p>
+
+      <!-- Sección de Envíos Recientes (Previous Submissions) -->
+      <div class="previous-submissions-container">
+        <h3>Previous Submissions</h3>
+        <div id="submissions-list" class="submissions-list">
+          <p style="color: #888;">Cargando historial de envíos...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pestaña 4: Reglas -->
+    <section id="tab-rules" class="tab-content">
+      <div class="rules-card">
+        <h2>Reglas de Aceptación de Récords</h2>
+        <h3>1. Requisitos de Grabación</h3>
+        <ul>
+          <li>El video debe incluir clicks/taps audibles o visor de inputs.</li>
+          <li>Grabación limpia sin cortes sospechosos.</li>
+        </ul>
+        <h3>2. Modificaciones</h3>
+        <ul>
+          <li>Prohibido Noclip, Speedhack o Botting (TAS).</li>
+        </ul>
+      </div>
     </section>
   </main>
 
