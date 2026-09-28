@@ -1,0 +1,18 @@
+[
+  {
+    "position": 1,
+    "name": "Blade Of Justice",
+    "publisher": "Manix648",
+    "verifier": "ItsDorky",
+    "video": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    "percentToQualify": 100
+  },
+  {
+    "position": 2,
+    "name": "Avernus",
+    "publisher": "Paimon",
+    "verifier": "Diamond",
+    "video": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    "percentToQualify": 100
+  }
+]
