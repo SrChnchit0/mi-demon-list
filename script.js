@@ -9,30 +9,43 @@ try {
   if (window.supabase) {
     supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   }
-} catch (err) {
-  console.error("Error iniciando Supabase client:", err);
+} catch (e) {
+  console.error("Error al inicializar Supabase:", e);
 }
 
 let currentUser = null;
 
 // ==========================================
-// INICIALIZACIÓN Y NAVEGACIÓN
+// FUNCIONES DE INTERFAZ Y MODAL (RESPUESTA INMEDIATA)
 // ==========================================
-document.addEventListener("DOMContentLoaded", async () => {
-  if (supabase) {
-    await checkSession();
-    await loadLevels();
-  } else {
-    const container = document.getElementById("levels-container");
-    if (container) container.innerHTML = "<p style='color:red;'>Error al conectar con la librería de Supabase.</p>";
-  }
-});
+function openAuthModal() {
+  const modal = document.getElementById("auth-modal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeAuthModal() {
+  const modal = document.getElementById("auth-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function toggleAuthMode(e) {
+  if (e) e.preventDefault();
+  const title = document.getElementById("modal-title");
+  const submitBtn = document.getElementById("auth-submit-btn");
+  const switchLink = document.getElementById("auth-switch-link");
+  if (!title) return;
+
+  const isLogin = title.textContent === "Iniciar Sesión";
+  title.textContent = isLogin ? "Crear Cuenta" : "Iniciar Sesión";
+  if (submitBtn) submitBtn.textContent = isLogin ? "Registrarse" : "Entrar";
+  if (switchLink) switchLink.textContent = isLogin ? "Inicia Sesión" : "Regístrate";
+}
 
 function showSection(sectionName) {
   const sections = ["levels", "leaderboard", "submit", "rules"];
   sections.forEach(sec => {
     const el = document.getElementById(`sec-${sec}`);
-    if (el) el.style.display = sec === sectionName ? "block" : "none";
+    if (el) el.style.display = (sec === sectionName) ? "block" : "none";
   });
 
   if (sectionName === "leaderboard") loadLeaderboard();
@@ -40,43 +53,54 @@ function showSection(sectionName) {
 }
 
 // ==========================================
-// CARGAR NIVELES DESDE SUPABASE
+// CARGA DE NIVELES (CON TIMEOUT DE SEGURIDAD)
 // ==========================================
 async function loadLevels() {
   const container = document.getElementById("levels-container");
-  if (!container || !supabase) return;
+  if (!container) return;
 
-  container.innerHTML = "<p style='color: var(--text-muted);'>Cargando niveles...</p>";
-
-  const { data: levels, error } = await supabase
-    .from("levels")
-    .select("*")
-    .order("position", { ascending: true });
-
-  if (error) {
-    console.error("Error al obtener niveles:", error);
-    container.innerHTML = `<p style='color: var(--danger-color);'>Error al conectar con la base de datos: ${error.message}</p>`;
+  if (!supabase) {
+    container.innerHTML = "<p style='color: var(--text-muted);'>No se pudo inicializar la conexión.</p>";
     return;
   }
 
-  if (!levels || levels.length === 0) {
-    container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles registrados aún en la base de datos.</p>";
-    return;
-  }
+  try {
+    const fetchPromise = supabase
+      .from("levels")
+      .select("*")
+      .order("position", { ascending: true });
 
-  container.innerHTML = levels.map(level => `
-    <div style="background: var(--bg-color); padding: 15px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <strong style="color: var(--accent-color); font-size: 1.1rem;">#${level.position} - ${level.name}</strong>
-        <p style="font-size: 0.85rem; color: var(--text-muted);">Creador: ${level.creator || 'Desconocido'} | Puntos: ${level.points || 0}</p>
+    // Cancela la espera si Supabase tarda más de 3 segundos
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("Timeout")), 3000)
+    );
+
+    const { data: levels, error } = await Promise.race([fetchPromise, timeoutPromise]);
+
+    if (error) throw error;
+
+    if (!levels || levels.length === 0) {
+      container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles registrados en la base de datos.</p>";
+      return;
+    }
+
+    container.innerHTML = levels.map(level => `
+      <div style="background: var(--bg-color); padding: 15px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <strong style="color: var(--accent-color); font-size: 1.1rem;">#${level.position} - ${level.name}</strong>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Creador: ${level.creator || 'Desconocido'} | Puntos: ${level.points || 0}</p>
+        </div>
+        ${level.video_url ? `<a href="${level.video_url}" target="_blank" class="btn" style="text-decoration: none; font-size: 0.8rem;">Ver Showcase</a>` : ''}
       </div>
-      ${level.video_url ? `<a href="${level.video_url}" target="_blank" class="btn" style="text-decoration: none; font-size: 0.8rem;">Ver Showcase</a>` : ''}
-    </div>
-  `).join("");
+    `).join("");
 
-  const levelSelect = document.getElementById("level-select");
-  if (levelSelect) {
-    levelSelect.innerHTML = levels.map(l => `<option value="${l.id}">${l.name}</option>`).join("");
+    const levelSelect = document.getElementById("level-select");
+    if (levelSelect) {
+      levelSelect.innerHTML = levels.map(l => `<option value="${l.id}">${l.name}</option>`).join("");
+    }
+  } catch (err) {
+    console.warn("Aviso:", err);
+    container.innerHTML = "<p style='color: var(--text-muted);'>No se pudieron obtener los niveles en este momento.</p>";
   }
 }
 
@@ -85,8 +109,12 @@ async function loadLevels() {
 // ==========================================
 async function checkSession() {
   if (!supabase) return;
-  const { data: { session } } = await supabase.auth.getSession();
-  updateAuthUI(session?.user || null);
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    updateAuthUI(session?.user || null);
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 function updateAuthUI(user) {
@@ -119,7 +147,7 @@ function updateAuthUI(user) {
 
 async function handleAuthSubmit(e) {
   e.preventDefault();
-  if (!supabase) return;
+  if (!supabase) return alert("Error de conexión con Supabase.");
 
   const email = document.getElementById("auth-email").value;
   const password = document.getElementById("auth-password").value;
@@ -159,31 +187,8 @@ async function logout() {
   alert("Sesión cerrada");
 }
 
-function openAuthModal() {
-  const modal = document.getElementById("auth-modal");
-  if (modal) modal.style.display = "flex";
-}
-
-function closeAuthModal() {
-  const modal = document.getElementById("auth-modal");
-  if (modal) modal.style.display = "none";
-}
-
-function toggleAuthMode(e) {
-  if (e) e.preventDefault();
-  const title = document.getElementById("modal-title");
-  const submitBtn = document.getElementById("auth-submit-btn");
-  const switchLink = document.getElementById("auth-switch-link");
-  if (!title) return;
-
-  const isLogin = title.textContent === "Iniciar Sesión";
-  title.textContent = isLogin ? "Crear Cuenta" : "Iniciar Sesión";
-  if (submitBtn) submitBtn.textContent = isLogin ? "Registrarse" : "Entrar";
-  if (switchLink) switchLink.textContent = isLogin ? "Inicia Sesión" : "Regístrate";
-}
-
 // ==========================================
-// ENVÍO DE RÉCORDS Y LEADERBOARD
+// RÉCORDS Y NOTIFICACIÓN DISCORD
 // ==========================================
 async function handleRecordSubmit(e) {
   e.preventDefault();
@@ -293,3 +298,9 @@ async function loadLeaderboard() {
     </tr>
   `).join("");
 }
+
+// Inicializar al cargar
+document.addEventListener("DOMContentLoaded", () => {
+  checkSession();
+  loadLevels();
+});
