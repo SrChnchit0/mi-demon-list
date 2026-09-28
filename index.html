@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js"></script>
-<script>var vConsole = new VConsole();</script>
-
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Demon List</title>
   <link rel="stylesheet" href="./styles.css">
-  <!-- SDK de Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js"></script>
+  <script>var vConsole = new VConsole();</script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -59,9 +57,7 @@
 
         <div class="form-group">
           <label for="level-select">Nivel:</label>
-          <select id="level-select" required>
-            <!-- Opciones cargadas por JS -->
-          </select>
+          <select id="level-select" required></select>
         </div>
 
         <div class="form-group">
@@ -83,7 +79,6 @@
       </form>
 
       <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border-color);">
-
       <h3>Submisiones Recientes</h3>
       <div id="previous-submissions"></div>
     </section>
@@ -98,7 +93,6 @@
     </section>
   </main>
 
-  <!-- Modal de Autenticación -->
   <div id="auth-modal" class="modal" style="display: none;">
     <div class="modal-content">
       <span class="close-btn" onclick="closeAuthModal()">&times;</span>
@@ -125,7 +119,90 @@
     </div>
   </div>
 
-  <!-- Tu lógica de JavaScript -->
-  <script src="./script.js"></script>
+  <script>
+    const SUPABASE_URL = "https://jdvgdgiomrbmlxvvjvhd.supabase.co"; 
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI";
+
+    let supabase = null;
+    try {
+      if (window.supabase) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    let currentUser = null;
+
+    function openAuthModal() {
+      const modal = document.getElementById("auth-modal");
+      if (modal) modal.style.display = "flex";
+    }
+
+    function closeAuthModal() {
+      const modal = document.getElementById("auth-modal");
+      if (modal) modal.style.display = "none";
+    }
+
+    function toggleAuthMode(e) {
+      if (e) e.preventDefault();
+      const title = document.getElementById("modal-title");
+      const submitBtn = document.getElementById("auth-submit-btn");
+      const switchLink = document.getElementById("auth-switch-link");
+      if (!title) return;
+
+      const isLogin = title.textContent === "Iniciar Sesión";
+      title.textContent = isLogin ? "Crear Cuenta" : "Iniciar Sesión";
+      if (submitBtn) submitBtn.textContent = isLogin ? "Registrarse" : "Entrar";
+      if (switchLink) switchLink.textContent = isLogin ? "Inicia Sesión" : "Regístrate";
+    }
+
+    function showSection(sectionName) {
+      const sections = ["levels", "leaderboard", "submit", "rules"];
+      sections.forEach(sec => {
+        const el = document.getElementById(`sec-${sec}`);
+        if (el) el.style.display = (sec === sectionName) ? "block" : "none";
+      });
+    }
+
+    async function loadLevels() {
+      const container = document.getElementById("levels-container");
+      if (!container) return;
+
+      if (!supabase) {
+        container.innerHTML = "<p style='color: var(--text-muted);'>Cargando niveles...</p>";
+        return;
+      }
+
+      try {
+        const fetchPromise = supabase.from("levels").select("*").order("position", { ascending: true });
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000));
+        const { data: levels, error } = await Promise.race([fetchPromise, timeoutPromise]);
+
+        if (error) throw error;
+
+        if (!levels || levels.length === 0) {
+          container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles registrados en la base de datos.</p>";
+          return;
+        }
+
+        container.innerHTML = levels.map(level => `
+          <div style="background: var(--bg-color); padding: 15px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong style="color: var(--accent-color); font-size: 1.1rem;">#${level.position} - ${level.name}</strong>
+              <p style="font-size: 0.85rem; color: var(--text-muted);">Creador: ${level.creator || 'Desconocido'} | Puntos: ${level.points || 0}</p>
+            </div>
+            ${level.video_url ? `<a href="${level.video_url}" target="_blank" class="btn" style="text-decoration: none; font-size: 0.8rem;">Ver Showcase</a>` : ''}
+          </div>
+        `).join("");
+      } catch (err) {
+        container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles disponibles actualmente.</p>";
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadLevels();
+    });
+  </script>
 </body>
 </html>
