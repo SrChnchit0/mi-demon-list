@@ -1,317 +1,266 @@
+// ==========================================
 // CONFIGURACIÓN DE SUPABASE
-const SUPABASE_URL = "https://jdvgdgiomrbmlxvvjvhd.supabase.co/rest/v1/";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI";
-const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// ==========================================
+const SUPABASE_URL = "https://jdvgdgiomrbmlxvv.supabase.co"; 
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI";
 
-// VARIABLES GLOBALES
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Variable global para almacenar el usuario activo
 let currentUser = null;
-let isSignUpMode = false;
 
-// 1. INICIALIZACIÓN
+// ==========================================
+// INICIALIZACIÓN Y NAVEGACIÓN
+// ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
-  // Verificar sesión existente
-  const { data: { session } } = await _supabase.auth.getSession();
-  if (session) {
-    currentUser = session.user;
-    updateUserUI();
-  }
-
-  // Escuchar cambios de autenticación
-  _supabase.auth.onAuthStateChange((_event, session) => {
-    currentUser = session ? session.user : null;
-    updateUserUI();
-  });
-
-  // Cargar datos iniciales
-  loadLevels();
-  loadLeaderboard();
-  loadPreviousSubmissions();
+  await checkSession();
+  await loadLevels();
 });
 
-// NAVEGACIÓN ENTRE PESTAÑAS
-function switchTab(tabId) {
-  document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+function showSection(sectionName) {
+  const sections = ["levels", "leaderboard", "submit", "rules"];
+  sections.forEach(sec => {
+    const el = document.getElementById(`sec-${sec}`);
+    if (el) el.style.display = sec === sectionName ? "block" : "none";
+  });
 
-  document.getElementById(`tab-${tabId}`).classList.add('active');
-  event.target.classList.add('active');
+  if (sectionName === "leaderboard") loadLeaderboard();
+  if (sectionName === "submit" && currentUser) loadPreviousSubmissions();
 }
 
-// 2. SISTEMA DE AUTENTICACIÓN (LOGIN / REGISTRO)
-function updateUserUI() {
-  const loggedInDiv = document.getElementById("user-logged-in");
-  const loggedOutDiv = document.getElementById("user-logged-out");
-  const userDisplay = document.getElementById("user-display-name");
+// ==========================================
+// CARGAR NIVELES DESDE SUPABASE
+// ==========================================
+async function loadLevels() {
+  const container = document.getElementById("levels-container");
+  if (!container) return;
+
+  container.innerHTML = "<p style='color: var(--text-muted);'>Cargando niveles...</p>";
+
+  const { data: levels, error } = await supabase
+    .from("levels")
+    .select("*")
+    .order("position", { ascending: true });
+
+  if (error || !levels || levels.length === 0) {
+    container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles registrados aún en la base de datos.</p>";
+    return;
+  }
+
+  container.innerHTML = levels.map(level => `
+    <div style="background: var(--bg-color); padding: 15px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <strong style="color: var(--accent-color); font-size: 1.1rem;">#${level.position} - ${level.name}</strong>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Creador: ${level.creator || 'Desconocido'} | Puntos: ${level.points || 0}</p>
+      </div>
+      ${level.video_url ? `<a href="${level.video_url}" target="_blank" class="btn" style="text-decoration: none; font-size: 0.8rem;">Ver Showcase</a>` : ''}
+    </div>
+  `).join("");
+
+  // Poblar opciones en el menú desplegable del formulario
+  const levelSelect = document.getElementById("level-select");
+  if (levelSelect) {
+    levelSelect.innerHTML = levels.map(l => `<option value="${l.id}">${l.name}</option>`).join("");
+  }
+}
+
+// ==========================================
+// AUTENTICACIÓN (SUPABASE AUTH)
+// ==========================================
+async function checkSession() {
+  const { data: { session } } = await supabase.auth.getSession();
+  updateAuthUI(session?.user || null);
+}
+
+function updateAuthUI(user) {
+  currentUser = user;
+  const authBtn = document.getElementById("auth-btn");
   const usernameInput = document.getElementById("username");
 
-  if (currentUser) {
-    const username = currentUser.user_metadata?.username || currentUser.email.split('@')[0];
-    userDisplay.innerText = username;
-    loggedInDiv.style.display = "flex";
-    loggedOutDiv.style.display = "none";
-    
+  if (user) {
+    const name = user.user_metadata?.username || user.email.split("@")[0];
+    if (authBtn) {
+      authBtn.textContent = `Hola, ${name}`;
+      authBtn.onclick = logout;
+    }
     if (usernameInput) {
-      usernameInput.value = username;
-      usernameInput.readOnly = true;
+      usernameInput.value = name;
+      usernameInput.disabled = true;
     }
   } else {
-    loggedInDiv.style.display = "none";
-    loggedOutDiv.style.display = "block";
-    
+    if (authBtn) {
+      authBtn.textContent = "Iniciar Sesión";
+      authBtn.onclick = openAuthModal;
+    }
     if (usernameInput) {
       usernameInput.value = "";
       usernameInput.placeholder = "Inicia sesión para enviar un récord";
-      usernameInput.readOnly = true;
+      usernameInput.disabled = true;
     }
   }
 }
 
-function showAuthModal() {
-  document.getElementById("auth-modal").style.display = "flex";
-}
-
-function closeAuthModal() {
-  document.getElementById("auth-modal").style.display = "none";
-}
-
-function toggleAuthMode(e) {
-  e.preventDefault();
-  isSignUpMode = !isSignUpMode;
-  const title = document.getElementById("modal-title");
-  const btn = document.getElementById("auth-submit-btn");
-  const link = document.getElementById("toggle-auth-mode");
-  const usernameInput = document.getElementById("auth-username");
-
-  if (isSignUpMode) {
-    title.innerText = "Crear Cuenta";
-    btn.innerText = "Registrarse";
-    link.innerText = "¿Ya tienes cuenta? Inicia sesión";
-    usernameInput.style.display = "block";
-  } else {
-    title.innerText = "Iniciar Sesión";
-    btn.innerText = "Entrar";
-    link.innerText = "¿No tienes cuenta? Regístrate aquí";
-    usernameInput.style.display = "none";
-  }
-}
-
-async function handleAuth(e) {
+async function handleAuthSubmit(e) {
   e.preventDefault();
   const email = document.getElementById("auth-email").value;
   const password = document.getElementById("auth-password").value;
-  const username = document.getElementById("auth-username").value;
+  const isRegister = document.getElementById("modal-title").textContent.includes("Registro") || 
+                     document.getElementById("modal-title").textContent.includes("Crear");
 
-  if (isSignUpMode) {
-    const { data, error } = await _supabase.auth.signUp({
+  if (isRegister) {
+    const username = prompt("Ingresa tu nombre de usuario para la Demon List:");
+    if (!username) return;
+
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { username: username } }
+      options: { data: { username } }
     });
 
-    if (error) {
-      alert("Error en el registro: " + error.message);
-    } else {
-      alert("¡Cuenta creada exitosamente!");
+    if (error) alert("Error al registrarse: " + error.message);
+    else {
+      alert("¡Cuenta creada con éxito!");
+      updateAuthUI(data.user);
       closeAuthModal();
     }
   } else {
-    const { data, error } = await _supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) {
-      alert("Error al iniciar sesión: " + error.message);
-    } else {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) alert("Error al iniciar sesión: " + error.message);
+    else {
+      updateAuthUI(data.user);
       closeAuthModal();
     }
   }
 }
 
 async function logout() {
-  await _supabase.auth.signOut();
-  currentUser = null;
-  updateUserUI();
+  await supabase.auth.signOut();
+  updateAuthUI(null);
+  alert("Sesión cerrada");
 }
 
-// 3. FORMATEO DE VIDEOS A EMBED
-function formatYouTubeEmbed(url) {
-  if (!url) return '';
-  let videoId = '';
-  if (url.includes('youtu.be/')) {
-    videoId = url.split('youtu.be/')[1].split('?')[0];
-  } else if (url.includes('youtube.com/watch')) {
-    const urlParams = new URLSearchParams(new URL(url).search);
-    videoId = urlParams.get('v');
-  } else if (url.includes('youtube.com/embed/')) {
-    return url;
+function openAuthModal() { document.getElementById("auth-modal").style.display = "flex"; }
+function closeAuthModal() { document.getElementById("auth-modal").style.display = "none"; }
+
+function toggleAuthMode(e) {
+  e.preventDefault();
+  const title = document.getElementById("modal-title");
+  const submitBtn = document.getElementById("auth-submit-btn");
+  const switchLink = document.getElementById("auth-switch-link");
+  const isLogin = title.textContent === "Iniciar Sesión";
+
+  title.textContent = isLogin ? "Crear Cuenta" : "Iniciar Sesión";
+  submitBtn.textContent = isLogin ? "Registrarse" : "Entrar";
+  switchLink.textContent = isLogin ? "Inicia Sesión" : "Regístrate";
+}
+
+// ==========================================
+// ENVÍO DE RÉCORDS Y LEADERBOARD
+// ==========================================
+async function handleRecordSubmit(e) {
+  e.preventDefault();
+  if (!currentUser) return alert("Debes iniciar sesión para subir un récord");
+
+  const level_id = document.getElementById("level-select").value;
+  const percent = document.getElementById("percent").value;
+  const hz = document.getElementById("hz").value;
+  const video_url = document.getElementById("video-url").value;
+  const username = currentUser.user_metadata?.username || currentUser.email.split("@")[0];
+
+  const { error } = await supabase.from("records").insert([{
+    user_id: currentUser.id,
+    username,
+    level_id,
+    percent,
+    hz,
+    video_url,
+    status: "pending"
+  }]);
+
+  if (error) alert("Error al enviar récord: " + error.message);
+  else {
+    alert("¡Récord enviado con éxito a revisión!");
+    document.getElementById("record-form").reset();
+    sendDiscordNotification({ username, percent, hz, video_url });
+    loadPreviousSubmissions();
   }
-  return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
 }
 
-// 4. CARGA DE DATOS DESDE SUPABASE
-async function loadLevels() {
-  const { data: levels, error } = await _supabase
-    .from('levels')
-    .select('*')
-    .order('position', { ascending: true });
+async function sendDiscordNotification(record) {
+  const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966150277275758/guiKF0NBX1D-b3qOcjGBLx5ClICBA0ToBImdoItn-yAEea3qUIBFOx-xcnKZsXjBV1nG";
 
-  if (error) return console.error(error);
-
-  const container = document.getElementById('levels-container');
-  const select = document.getElementById('level-select');
-  container.innerHTML = '';
-  select.innerHTML = '';
-
-  levels.forEach(level => {
-    const embedUrl = formatYouTubeEmbed(level.video_url);
-    
-    // Card para el Tab de Niveles
-    container.innerHTML += `
-      <div class="level-card">
-        <div class="level-rank">#${level.position}</div>
-        <h3>${level.name}</h3>
-        <p class="creator">por ${level.creator}</p>
-        <div class="video-wrapper">
-          <iframe src="${embedUrl}" frameborder="0" allowfullscreen></iframe>
-        </div>
-        <p class="points">Puntos: <strong>${level.points}</strong></p>
-      </div>
-    `;
-
-    // Opciones para el select de Submit
-    select.innerHTML += `<option value="${level.name}">${level.name}</option>`;
-  });
-}
-
-async function loadLeaderboard() {
-  const { data: lb, error } = await _supabase
-    .from('leaderboard')
-    .select('*')
-    .order('total_points', { ascending: false });
-
-  if (error) return console.error(error);
-
-  const tbody = document.getElementById('leaderboard-body');
-  tbody.innerHTML = '';
-
-  lb.forEach((player, index) => {
-    tbody.innerHTML += `
-      <tr>
-        <td>#${index + 1}</td>
-        <td><strong>${player.username}</strong></td>
-        <td>${player.total_points} pts</td>
-        <td>${player.demons_completed}</td>
-      </tr>
-    `;
+  await fetch(DISCORD_WEBHOOK_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: "Demon List Bot",
+      embeds: [{
+        title: "📥 ¡Nuevo Récord Enviado!",
+        color: 16729943,
+        fields: [
+          { name: "👤 Jugador", value: record.username, inline: true },
+          { name: "📊 Porcentaje", value: `${record.percent}%`, inline: true },
+          { name: "⚡ Hz", value: `${record.hz}Hz`, inline: true },
+          { name: "🎥 Prueba", value: `[Ver Video](${record.video_url})`, inline: false }
+        ],
+        footer: { text: "Demon List Submission System" },
+        timestamp: new Date().toISOString()
+      }]
+    })
   });
 }
 
 async function loadPreviousSubmissions() {
-  const { data: submissions, error } = await _supabase
-    .from('records')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(5);
+  const container = document.getElementById("previous-submissions");
+  if (!container || !currentUser) return;
 
-  if (error) return console.error(error);
+  const { data: records, error } = await supabase
+    .from("records")
+    .select("*")
+    .eq("user_id", currentUser.id);
 
-  const container = document.getElementById('previous-submissions');
-  container.innerHTML = '';
-
-  submissions.forEach(sub => {
-    const statusClass = sub.status === 'approved' ? 'status-approved' : (sub.status === 'rejected' ? 'status-rejected' : 'status-pending');
-    container.innerHTML += `
-      <div class="submission-card">
-        <div>
-          <strong>${sub.username}</strong> - ${sub.level_name} (${sub.percent}%)
-        </div>
-        <span class="status-badge ${statusClass}">${sub.status.toUpperCase()}</span>
-      </div>
-    `;
-  });
-}
-
-// 5. PROCESAMIENTO Y ENVÍO DE RÉCORDS
-async function submitRecord(e) {
-  e.preventDefault();
-  
-  if (!currentUser) {
-    alert("Debes iniciar sesión para subir un récord.");
-    showAuthModal();
+  if (error || !records || records.length === 0) {
+    container.innerHTML = "<p style='color: var(--text-muted);'>No has enviado récords aún.</p>";
     return;
   }
 
-  const username = currentUser.user_metadata?.username || currentUser.email.split('@')[0];
-  const level_name = document.getElementById("level-select").value;
-  const percent = parseInt(document.getElementById("percent").value);
-  const hz = parseInt(document.getElementById("hz").value);
-  const video_url = document.getElementById("video-url").value;
-
-  const { data, error } = await _supabase
-    .from('records')
-    .insert([
-      { 
-        username, 
-        level_name, 
-        percent, 
-        hz, 
-        video_url, 
-        status: 'pending',
-        user_id: currentUser.id 
-      }
-    ]);
-
-  const msg = document.getElementById("submit-msg");
-
-  if (error) {
-    msg.style.color = "#e74c3c";
-    msg.innerText = "Error al enviar el récord. Intenta de nuevo.";
-  } else {
-    msg.style.color = "#2ecc71";
-    msg.innerText = `¡Gracias ${username}! Tu récord en ${level_name} fue enviado a revisión.`;
-    
-    document.getElementById("record-form").reset();
-    loadPreviousSubmissions();
-
-    // Notificar al canal privado #records de Discord
-    sendDiscordNotification({ username, level_name, percent, hz, video_url });
-  }
+  container.innerHTML = records.map(r => `
+    <div style="background: var(--bg-color); padding: 10px; margin-bottom: 8px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.9rem;">
+      <strong>${r.percent}%</strong> - Estado: 
+      <span style="color: ${r.status === 'approved' ? 'var(--success-color)' : r.status === 'rejected' ? 'var(--danger-color)' : 'orange'};">
+        ${r.status.toUpperCase()}
+      </span>
+    </div>
+  `).join("");
 }
 
-// Envío a Discord (Canal Privado #records)
-async function sendDiscordNotification(record) {
-  // ⚠️ PEGA AQUÍ LA URL DE TU WEBHOOK PRIVADO
-  const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966150277275758/guiKF0NBX1D-b3qOcjGBLx5ClICBA0ToBImdoItn-yAEea3qUIBFOx-xcnKZsXjBV1nG";
+async function loadLeaderboard() {
+  const body = document.getElementById("leaderboard-body");
+  if (!body) return;
+  body.innerHTML = "<tr><td colspan='4'>Cargando clasificación...</td></tr>";
 
-  if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL.includes("URL_DE_TU_WEBHOOK")) return;
+  const { data: records, error } = await supabase
+    .from("records")
+    .select("*")
+    .eq("status", "approved");
 
-  const payload = {
-    username: "Demon List Bot",
-    embeds: [
-      {
-        title: "📥 ¡Nuevo Récord Enviado!",
-        color: 16729943, // Rojo Neón
-        fields: [
-          { name: "👤 Jugador", value: record.username, inline: true },
-          { name: "📌 Nivel", value: record.level_name, inline: true },
-          { name: "📊 Porcentaje", value: `${record.percent}%`, inline: true },
-          { name: "⚡ Tasa (Hz)", value: `${record.hz} Hz`, inline: true },
-          { name: "🎥 Video / Proof", value: `[Ver Video](${record.video_url})`, inline: false }
-        ],
-        footer: { text: "Demon List Submission System" },
-        timestamp: new Date().toISOString()
-      }
-    ]
-  };
-
-  try {
-    await fetch(DISCORD_WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-  } catch (err) {
-    console.error("Error enviando notificación a Discord:", err);
+  if (error || !records || records.length === 0) {
+    body.innerHTML = "<tr><td colspan='4'>No hay récords aprobados aún.</td></tr>";
+    return;
   }
+
+  const scores = {};
+  records.forEach(r => {
+    scores[r.username] = (scores[r.username] || 0) + 100;
+  });
+
+  const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  body.innerHTML = sorted.map(([user, pts], idx) => `
+    <tr>
+      <td>#${idx + 1}</td>
+      <td><strong>${user}</strong></td>
+      <td>${pts} pts</td>
+      <td>-</td>
+    </tr>
+  `).join("");
 }
