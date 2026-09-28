@@ -4,7 +4,58 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Demon List</title>
-  <link rel="stylesheet" href="./styles.css">
+  <style>
+    :root {
+      --bg-color: #121212;
+      --card-bg: #1e1e1e;
+      --accent-color: #00adb5;
+      --text-color: #eeeeee;
+      --text-muted: #888888;
+      --border-color: #333333;
+    }
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+    }
+    nav button {
+      background: none;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 8px 12px;
+      margin-left: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    nav button.btn-primary {
+      background-color: var(--accent-color);
+      color: #fff;
+      border: none;
+    }
+    .modal {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex; justify-content: center; align-items: center;
+    }
+    .modal-content {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+    }
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js"></script>
   <script>var vConsole = new VConsole();</script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -26,142 +77,68 @@
     <section id="sec-levels">
       <h2>Top Demon Levels</h2>
       <div id="levels-container">
-        <p>Cargando niveles...</p>
+        <p style="color: var(--text-muted);">Cargando niveles desde Supabase...</p>
       </div>
     </section>
 
     <section id="sec-leaderboard" style="display: none;">
       <h2>Tabla de Clasificación</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Posición</th>
-            <th>Jugador</th>
-            <th>Puntos</th>
-            <th>Demons Completados</th>
-          </tr>
-        </thead>
-        <tbody id="leaderboard-body">
-          <tr><td colspan="4">Cargando clasificación...</td></tr>
-        </tbody>
-      </table>
+      <div id="leaderboard-container"><p>Sin récords aún.</p></div>
     </section>
 
     <section id="sec-submit" style="display: none;">
       <h2>Enviar Récord</h2>
-      <form id="record-form" onsubmit="handleRecordSubmit(event)">
-        <div class="form-group">
-          <label for="username">Jugador:</label>
-          <input type="text" id="username" placeholder="Inicia sesión para enviar un récord" required disabled>
-        </div>
-
-        <div class="form-group">
-          <label for="level-select">Nivel:</label>
-          <select id="level-select" required></select>
-        </div>
-
-        <div class="form-group">
-          <label for="percent">Porcentaje (%):</label>
-          <input type="number" id="percent" min="1" max="100" value="100" required>
-        </div>
-
-        <div class="form-group">
-          <label for="hz">Tasa de Refresco (Hz):</label>
-          <input type="number" id="hz" value="240" required>
-        </div>
-
-        <div class="form-group">
-          <label for="video-url">URL de Video / Prueba (YouTube):</label>
-          <input type="url" id="video-url" placeholder="https://www.youtube.com/watch?v=..." required>
-        </div>
-
-        <button type="submit" class="btn btn-primary">Enviar Récord</button>
-      </form>
-
-      <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border-color);">
-      <h3>Submisiones Recientes</h3>
-      <div id="previous-submissions"></div>
+      <p>Inicia sesión para poder enviar récords.</p>
     </section>
 
     <section id="sec-rules" style="display: none;">
       <h2>Reglas de la Lista</h2>
       <ul>
-        <li>Todas las completaciones deben incluir prueba en video con clicks/taps audibles.</li>
-        <li>No se permite el uso de hacks o modificadores de velocidad ilegales.</li>
-        <li>Los videos deben mostrar el intento completo sin cortes.</li>
+        <li>Clicks / taps audibles obligatorios.</li>
+        <li>No hacks o modificadores de velocidad.</li>
       </ul>
     </section>
   </main>
 
   <div id="auth-modal" class="modal" style="display: none;">
     <div class="modal-content">
-      <span class="close-btn" onclick="closeAuthModal()">&times;</span>
       <h2 id="modal-title">Iniciar Sesión</h2>
-      
-      <form id="auth-form" onsubmit="handleAuthSubmit(event)">
-        <div class="form-group">
-          <label for="auth-email">Correo Electrónico:</label>
-          <input type="email" id="auth-email" placeholder="tu@correo.com" required>
-        </div>
-
-        <div class="form-group">
-          <label for="auth-password">Contraseña:</label>
-          <input type="password" id="auth-password" placeholder="••••••••" required>
-        </div>
-
-        <button type="submit" id="auth-submit-btn" class="btn btn-primary" style="margin-top: 10px;">Entrar</button>
+      <form onsubmit="handleAuth(event)">
+        <input type="email" id="auth-email" placeholder="Correo" required style="width: 100%; margin-bottom: 10px; padding: 8px;">
+        <input type="password" id="auth-password" placeholder="Contraseña" required style="width: 100%; margin-bottom: 10px; padding: 8px;">
+        <button type="submit" style="width: 100%; padding: 10px; background: var(--accent-color); color: white; border: none; border-radius: 4px;">Entrar</button>
       </form>
-
-      <p style="margin-top: 15px; font-size: 0.9rem; text-align: center;">
-        <span id="auth-switch-text">¿No tienes cuenta?</span>
-        <a href="#" onclick="toggleAuthMode(event)" id="auth-switch-link" style="color: var(--accent-color); font-weight: bold;">Regístrate</a>
-      </p>
+      <button onclick="closeAuthModal()" style="margin-top: 10px; background: transparent; color: #888; border: none;">Cerrar</button>
     </div>
   </div>
 
   <script>
+    console.log("Iniciando script principal...");
     const SUPABASE_URL = "https://jdvgdgiomrbmlxvvjvhd.supabase.co"; 
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI";
 
-    let supabase = null;
+    let supabaseClient = null;
     try {
       if (window.supabase) {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        console.log("Supabase cliente inicializado correctamente.");
       }
     } catch (e) {
-      console.error(e);
+      console.error("Error iniciando Supabase:", e);
     }
 
-    let currentUser = null;
-
     function openAuthModal() {
-      const modal = document.getElementById("auth-modal");
-      if (modal) modal.style.display = "flex";
+      document.getElementById("auth-modal").style.display = "flex";
     }
 
     function closeAuthModal() {
-      const modal = document.getElementById("auth-modal");
-      if (modal) modal.style.display = "none";
+      document.getElementById("auth-modal").style.display = "none";
     }
 
-    function toggleAuthMode(e) {
-      if (e) e.preventDefault();
-      const title = document.getElementById("modal-title");
-      const submitBtn = document.getElementById("auth-submit-btn");
-      const switchLink = document.getElementById("auth-switch-link");
-      if (!title) return;
-
-      const isLogin = title.textContent === "Iniciar Sesión";
-      title.textContent = isLogin ? "Crear Cuenta" : "Iniciar Sesión";
-      if (submitBtn) submitBtn.textContent = isLogin ? "Registrarse" : "Entrar";
-      if (switchLink) switchLink.textContent = isLogin ? "Inicia Sesión" : "Regístrate";
-    }
-
-    function showSection(sectionName) {
-      const sections = ["levels", "leaderboard", "submit", "rules"];
-      sections.forEach(sec => {
-        const el = document.getElementById(`sec-${sec}`);
-        if (el) el.style.display = (sec === sectionName) ? "block" : "none";
+    function showSection(sec) {
+      ["levels", "leaderboard", "submit", "rules"].forEach(s => {
+        const el = document.getElementById(`sec-${s}`);
+        if (el) el.style.display = (s === sec) ? "block" : "none";
       });
     }
 
@@ -169,38 +146,52 @@
       const container = document.getElementById("levels-container");
       if (!container) return;
 
-      if (!supabase) {
-        container.innerHTML = "<p style='color: var(--text-muted);'>Cargando niveles...</p>";
+      if (!supabaseClient) {
+        container.innerHTML = "<p style='color: red;'>Error de conexión con la librería de Supabase.</p>";
         return;
       }
 
       try {
-        const fetchPromise = supabase.from("levels").select("*").order("position", { ascending: true });
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000));
-        const { data: levels, error } = await Promise.race([fetchPromise, timeoutPromise]);
-
-        if (error) throw error;
-
-        if (!levels || levels.length === 0) {
-          container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles registrados en la base de datos.</p>";
+        const { data: levels, error } = await supabaseClient.from("levels").select("*").order("position", { ascending: true });
+        
+        if (error) {
+          console.error("Error de la BD:", error);
+          container.innerHTML = `<p style="color: red;">Error BD: ${error.message}</p>`;
           return;
         }
 
-        container.innerHTML = levels.map(level => `
-          <div style="background: var(--bg-color); padding: 15px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <strong style="color: var(--accent-color); font-size: 1.1rem;">#${level.position} - ${level.name}</strong>
-              <p style="font-size: 0.85rem; color: var(--text-muted);">Creador: ${level.creator || 'Desconocido'} | Puntos: ${level.points || 0}</p>
-            </div>
-            ${level.video_url ? `<a href="${level.video_url}" target="_blank" class="btn" style="text-decoration: none; font-size: 0.8rem;">Ver Showcase</a>` : ''}
+        if (!levels || levels.length === 0) {
+          container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles agregados en la tabla 'levels' de Supabase.</p>";
+          return;
+        }
+
+        container.innerHTML = levels.map(l => `
+          <div style="background: var(--card-bg); padding: 12px; margin-bottom: 8px; border-radius: 6px;">
+            <strong style="color: var(--accent-color);">#${l.position} - ${l.name}</strong>
+            <p style="margin: 4px 0 0; font-size: 0.85rem; color: var(--text-muted);">Creador: ${l.creator || 'Desconocido'}</p>
           </div>
         `).join("");
       } catch (err) {
-        container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles disponibles actualmente.</p>";
+        console.error("Error al cargar niveles:", err);
+        container.innerHTML = "<p style='color: red;'>Excepción al conectar con la base de datos.</p>";
+      }
+    }
+
+    async function handleAuth(e) {
+      e.preventDefault();
+      const email = document.getElementById("auth-email").value;
+      const password = document.getElementById("auth-password").value;
+      
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) alert("Error: " + error.message);
+      else {
+        alert("¡Sesión iniciada!");
+        closeAuthModal();
       }
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+      console.log("DOM Cargado. Cargando datos...");
       loadLevels();
     });
   </script>
