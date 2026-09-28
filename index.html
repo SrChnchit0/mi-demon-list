@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Demon List</title>
-  <!-- Vinculación correcta al archivo de estilos -->
+  <!-- Archivo de estilos CSS -->
   <link rel="stylesheet" href="./styles.css">
-  <!-- SDK de Supabase desde CDN -->
+  <!-- SDK oficial de Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -24,15 +24,15 @@
   </header>
 
   <main>
-    <!-- SECCIÓN: NIVELES -->
+    <!-- SECCIÓN 1: NIVELES -->
     <section id="sec-levels">
       <h2>Top Demon Levels</h2>
       <div id="levels-container">
-        <!-- Los niveles se cargan dinámicamente con JavaScript -->
+        <p>Cargando niveles...</p>
       </div>
     </section>
 
-    <!-- SECCIÓN: LEADERBOARD -->
+    <!-- SECCIÓN 2: LEADERBOARD -->
     <section id="sec-leaderboard" style="display: none;">
       <h2>Tabla de Clasificación</h2>
       <table>
@@ -45,12 +45,12 @@
           </tr>
         </thead>
         <tbody id="leaderboard-body">
-          <!-- Datos dinámicos -->
+          <tr><td colspan="4">Cargando clasificación...</td></tr>
         </tbody>
       </table>
     </section>
 
-    <!-- SECCIÓN: SUBIR RÉCORD -->
+    <!-- SECCIÓN 3: SUBIR RÉCORD -->
     <section id="sec-submit" style="display: none;">
       <h2>Enviar Récord</h2>
       <form id="record-form" onsubmit="handleRecordSubmit(event)">
@@ -62,7 +62,7 @@
         <div class="form-group">
           <label for="level-select">Nivel:</label>
           <select id="level-select" required>
-            <!-- Opciones cargadas desde Supabase -->
+            <!-- Cargas dinámicas desde JS -->
           </select>
         </div>
 
@@ -88,11 +88,11 @@
 
       <h3>Submisiones Recientes (En revisión)</h3>
       <div id="previous-submissions">
-        <!-- Lista de récords del usuario -->
+        <!-- Lista de envíos del usuario -->
       </div>
     </section>
 
-    <!-- SECCIÓN: REGLAS -->
+    <!-- SECCIÓN 4: REGLAS -->
     <section id="sec-rules" style="display: none;">
       <h2>Reglas de la Lista</h2>
       <ul>
@@ -120,17 +120,17 @@
           <input type="password" id="auth-password" placeholder="••••••••" required>
         </div>
 
-        <button type="submit" id="auth-submit-btn" class="btn btn-primary">Entrar</button>
+        <button type="submit" id="auth-submit-btn" class="btn btn-primary" style="margin-top: 10px;">Entrar</button>
       </form>
 
       <p style="margin-top: 15px; font-size: 0.9rem; text-align: center;">
         <span id="auth-switch-text">¿No tienes cuenta?</span>
-        <a href="#" onclick="toggleAuthMode(event)" id="auth-switch-link" style="color: var(--accent-color);">Regístrate</a>
+        <a href="#" onclick="toggleAuthMode(event)" id="auth-switch-link" style="color: var(--accent-color); font-weight: bold;">Regístrate</a>
       </p>
     </div>
   </div>
 
-  <!-- Vinculación al script principal de JavaScript -->
+  <!-- Vinculación del script principal al final del body -->
   <script src="./script.js"></script>
 </body>
 </html>
