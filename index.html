@@ -385,22 +385,21 @@
     }
 
     // Calcular puntos de un usuario basándose en sus récords aprobados
-    async function calculateUserPoints(userId) {
+   async function calculateUserPoints(userId) {
       const { data: subs } = await supabaseClient.from("submissions").select("*").eq("user_id", userId).eq("status", "approved");
       let totalPoints = 0;
       if (subs && globalLevels.length > 0) {
         subs.forEach(sub => {
           const lvl = globalLevels.find(l => l.id == sub.level_id);
           if (lvl) {
-            // Fórmula: Posición 1 da 100 pts, la posición 10 da 91 pts, etc. (Mínimo 10 pts)
-            const pts = Math.max(100 - (lvl.position - 1) * 3, 10);
-            totalPoints += pts;
+            // Si el nivel tiene puntos asignados los usa, si no, por defecto otorga 50 puntos
+            totalPoints += (lvl.points || 50);
           }
         });
       }
       return totalPoints;
     }
-
+    
     async function fetchUserData(user) {
       currentUser = user;
       const authBtn = document.getElementById("auth-btn");
@@ -580,7 +579,7 @@
     }
 
     // LEADERBOARD ORDENADO POR PUNTUACIÓN DE MAYOR A MENOR
-    async function loadLeaderboard() {
+   async function loadLeaderboard() {
       const container = document.getElementById("leaderboard-container");
       if (!container || !supabaseClient) return;
 
@@ -598,7 +597,7 @@
           return;
         }
 
-        // Calcular puntos para cada perfil
+        // Calcular puntos sumando los puntos específicos de cada nivel completado
         let leaderboardData = [];
         for (const p of profiles) {
           const userSubs = subs.filter(s => s.user_id === p.id);
@@ -606,8 +605,7 @@
           userSubs.forEach(sub => {
             const lvl = globalLevels.find(l => l.id == sub.level_id);
             if (lvl) {
-              const pts = Math.max(100 - (lvl.position - 1) * 3, 10);
-              points += pts;
+              points += (lvl.points || 50);
             }
           });
 
