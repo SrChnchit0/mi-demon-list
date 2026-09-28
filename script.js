@@ -1,43 +1,74 @@
+// Tus claves de conexión a Supabase
+const SUPABASE_URL = "https://jdvgdgiomrbmlxvvjvhd.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI"; // Pegar aquí la clave pública muy larga
+
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 let levelsData = [];
 
-document.addEventListener("DOMContentLoaded", () => {
-  fetch("levels.json")
-    .then(response => response.json())
-    .then(data => {
-      levelsData = data;
-      renderLevels(levelsData);
-      renderLeaderboard(levelsData);
-      populateLevelSelect(levelsData);
-    })
-    .catch(error => console.error("Error cargando los datos:", error));
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const response = await fetch("levels.json");
+    levelsData = await response.json();
+    
+    // Obtener récords aprobados de Supabase
+    const approvedRecords = await fetchApprovedRecords();
+
+    renderLevels(levelsData, approvedRecords);
+    renderLeaderboard(levelsData, approvedRecords);
+    populateLevelSelect(levelsData);
+  } catch (error) {
+    console.error("Error al cargar la lista o los récords:", error);
+  }
 });
 
-// Control de pestañas
+// Obtener solo récords con estado 'approved' desde Supabase
+async function fetchApprovedRecords() {
+  const { data, error } = await _supabase
+    .from('records')
+    .select('*')
+    .eq('status', 'approved');
+
+  if (error) {
+    console.error("Error consultando Supabase:", error);
+    return [];
+  }
+  return data || [];
+}
+
+// Cambiar de pestañas
 function switchTab(tabName) {
   document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
 
   document.getElementById(`tab-${tabName}`).classList.add('active');
-  event.target.classList.add('active');
+  if (event && event.target) {
+    event.target.classList.add('active');
+  }
 }
 
-// Renderizar Niveles con Victors
-function renderLevels(levels) {
+// Renderizar niveles en pantalla
+function renderLevels(levels, dbRecords) {
   const container = document.getElementById("list-container");
   container.innerHTML = "";
 
   levels.sort((a, b) => a.position - b.position);
 
   levels.forEach(level => {
-    const victors = level.records ? level.records.filter(r => r.percent === 100) : [];
+    // Combinar récords locales de levels.json y aprobados de Supabase
+    const jsonRecords = level.records || [];
+    const supabaseMatch = dbRecords.filter(r => r.level_name === level.name && r.percent === 100)
+      .map(r => ({ user: r.username, hz: r.hz, video: r.video_url }));
+
+    const allVictors = [...jsonRecords, ...supabaseMatch];
 
     const card = document.createElement("div");
     card.className = "level-card";
 
-    let recordsHTML = victors.map(r => `
+    let recordsHTML = allVictors.map(r => `
       <div class="record-item">
         <span><strong>${r.user}</strong> (${r.hz}Hz)</span>
-        <a href="${r.video}" target="_blank">Ver Proof</a>
+        <a href="${r.video}" target="_blank" rel="noopener noreferrer">Ver Proof</a>
       </div>
     `).join("");
 
@@ -54,7 +85,7 @@ function renderLevels(levels) {
         <iframe src="${level.video}" allowfullscreen></iframe>
       </div>
       <div class="records-section">
-        <h4>Victors (${victors.length})</h4>
+        <h4>Victors (${allVictors.length})</h4>
         ${recordsHTML.length > 0 ? recordsHTML : "<p style='color:#777;'>Aún no hay victors registrados.</p>"}
       </div>
     `;
@@ -63,25 +94,34 @@ function renderLevels(levels) {
   });
 }
 
-// Calcular y renderizar el Leaderboard
-function renderLeaderboard(levels) {
+// Calcular tabla de puntos
+function renderLeaderboard(levels, dbRecords) {
   const players = {};
 
+  // Procesar récords de levels.json
   levels.forEach(level => {
-    if (!level.records) return;
-
-    level.records.forEach(record => {
+    const jsonRecords = level.records || [];
+    jsonRecords.forEach(record => {
       if (record.percent === 100) {
-        if (!players[record.user]) {
-          players[record.user] = { points: 0, victors: 0 };
-        }
+        if (!players[record.user]) players[record.user] = { points: 0, victors: 0 };
         players[record.user].points += (level.points || 100);
         players[record.user].victors += 1;
       }
     });
   });
 
-  // Convertir a lista y ordenar por puntos
+  // Procesar récords aprobados de Supabase
+  dbRecords.forEach(record => {
+    if (record.percent === 100) {
+      const level = levels.find(l => l.name === record.level_name);
+      const points = level ? (level.points || 100) : 100;
+
+      if (!players[record.username]) players[record.username] = { points: 0, victors: 0 };
+      players[record.username].points += points;
+      players[record.username].victors += 1;
+    }
+  });
+
   const sortedPlayers = Object.keys(players)
     .map(name => ({ name, ...players[name] }))
     .sort((a, b) => b.points - a.points);
@@ -97,20 +137,36 @@ function renderLeaderboard(levels) {
   `).join("");
 }
 
-// Llenar selector del formulario
+// Llenar selector de niveles en el formulario
 function populateLevelSelect(levels) {
   const select = document.getElementById("level-select");
   select.innerHTML = levels.map(l => `<option value="${l.name}">${l.name} (#${l.position})</option>`).join("");
 }
 
-// Formulario ficticio de envío (Para guardar en BD real se usa Supabase)
-function submitRecord(e) {
+// Enviar récord a Supabase
+async function submitRecord(e) {
   e.preventDefault();
-  const user = document.getElementById("username").value;
-  const level = document.getElementById("level-select").value;
   
-  document.getElementById("submit-msg").innerText = 
-    `¡Gracias ${user}! Tu récord en ${level} ha sido enviado a revisión.`;
-  
-  document.getElementById("record-form").reset();
+  const username = document.getElementById("username").value;
+  const level_name = document.getElementById("level-select").value;
+  const percent = parseInt(document.getElementById("percent").value);
+  const hz = parseInt(document.getElementById("hz").value);
+  const video_url = document.getElementById("video-url").value;
+
+  const { data, error } = await _supabase
+    .from('records')
+    .insert([
+      { username, level_name, percent, hz, video_url, status: 'pending' }
+    ]);
+
+  const msg = document.getElementById("submit-msg");
+  if (error) {
+    msg.style.color = "#e74c3c";
+    msg.innerText = "Error al enviar el récord. Intenta de nuevo.";
+    console.error(error);
+  } else {
+    msg.style.color = "#2ecc71";
+    msg.innerText = `¡Gracias ${username}! Tu récord en ${level_name} fue enviado a revisión.`;
+    document.getElementById("record-form").reset();
+  }
 }
