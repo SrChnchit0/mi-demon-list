@@ -396,8 +396,11 @@
     const SUPABASE_URL = "https://jdvgdgiomrbmlxvvjvhd.supabase.co"; 
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI";
     
+    // Webhooks de Discord (Privado para nuevos envíos / Público para aprobados o rechazados)
     const DISCORD_PRIVATE_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966150277275758/guiKF0NBX1D-b3qOcjGBLx5ClICBA0ToBImdoItn-yAEea3qUIBFOx-xcnKZsXjBV1nG";
     const DISCORD_PUBLIC_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966408369573978/Ugr9Q5-zH5gC6mdprG1AuLKToJeiRnojRVZyQYOaiyvuX_12OMNsKH9aqonGqNVCuXKW"; 
+
+    // Cambia esto por tu correo real de administrador para ver el panel admin
     const ADMIN_EMAIL = "fermisael.051178@gmail.com";
 
     let supabaseClient = null;
@@ -439,6 +442,18 @@
         await fetchUserData(data.user);
         closeAuthModal();
       }
+    }
+
+    // Función auxiliar para enviar notificaciones a Discord
+    async function sendDiscordWebhook(url, message) {
+      if (!url || url.trim() === "") return;
+      try {
+        await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: message })
+        });
+      } catch (err) { console.error("Error enviando webhook a Discord:", err); }
     }
 
     async function calculateUserPoints(userId) {
@@ -737,7 +752,19 @@
     }
 
     async function updateSubmissionStatus(id, newStatus) {
-      await supabaseClient.from("submissions").update({ status: newStatus }).eq("id", id);
+      const { data: updatedSub } = await supabaseClient.from("submissions").update({ status: newStatus }).eq("id", id).select().single();
+      
+      if (updatedSub) {
+        const lvl = globalLevels.find(l => l.id == updatedSub.level_id);
+        const levelName = lvl ? `#${lvl.position} ${lvl.name}` : "un nivel";
+        
+        if (newStatus === 'approved') {
+          await sendDiscordWebhook(DISCORD_PUBLIC_WEBHOOK_URL, `✅ ¡Récord Aprobado! Un jugador ha completado **${levelName}** (${updatedSub.percent}%) a ${updatedSub.hz}Hz. [Ver Prueba](${updatedSub.video_url})`);
+        } else if (newStatus === 'rejected') {
+          await sendDiscordWebhook(DISCORD_PUBLIC_WEBHOOK_URL, `❌ Récord no aprobado para **${levelName}** (${updatedSub.percent}%).`);
+        }
+      }
+
       alert(`Récord ${newStatus === 'approved' ? 'aprobado' : 'rechazado'}.`);
       loadAdminSubmissions();
       loadLeaderboard();
@@ -757,10 +784,16 @@
         { user_id: currentUser.id, level_id, percent, hz, video_url, status: "pending" }
       ]);
 
-      if (error) alert("Error: " + error.message);
-      else {
+      if (error) {
+        alert("Error: " + error.message);
+      } else {
         alert("¡Récord enviado!");
         document.getElementById("record-form").reset();
+        
+        // Notificar al canal privado de staff en Discord
+        const lvl = globalLevels.find(l => l.id == level_id);
+        const levelName = lvl ? `#${lvl.position} ${lvl.name}` : "un nivel";
+        await sendDiscordWebhook(DISCORD_PRIVATE_WEBHOOK_URL, `📥 Nuevo envío pendiente de **${currentUsername}** para **${levelName}** (${percent}%, ${hz}Hz). [Ver Prueba](${video_url})`);
       }
     }
 
