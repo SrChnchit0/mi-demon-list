@@ -3,19 +3,64 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mi Demon List</title>
+  <title>Demon List con Récords</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
   <header>
     <h1>Demon List</h1>
-    <p>Los niveles más difíciles de Geometry Dash</p>
+    <nav class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('list')">Niveles</button>
+      <button class="tab-btn" onclick="switchTab('leaderboard')">Leaderboard</button>
+      <button class="tab-btn" onclick="switchTab('submit')">Subir Récord</button>
+    </nav>
   </header>
 
   <main class="container">
-    <section id="list-container" class="list-container">
-      <!-- Los niveles se cargarán aquí automáticamente -->
+    <!-- Pestaña 1: Lista de Niveles -->
+    <section id="tab-list" class="tab-content active">
+      <div id="list-container"></div>
+    </section>
+
+    <!-- Pestaña 2: Tabla de Posiciones -->
+    <section id="tab-leaderboard" class="tab-content">
+      <h2>Tabla de Jugadores</h2>
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Jugador</th>
+            <th>Puntos</th>
+            <th>Victors (100%)</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-body"></tbody>
+      </table>
+    </section>
+
+    <!-- Pestaña 3: Formulario para enviar récords -->
+    <section id="tab-submit" class="tab-content">
+      <h2>Enviar tu Récord</h2>
+      <form id="record-form" onsubmit="submitRecord(event)">
+        <label>Nombre de usuario en GD:</label>
+        <input type="text" id="username" required placeholder="Tu nombre">
+
+        <label>Nivel:</label>
+        <select id="level-select" required></select>
+
+        <label>Porcentaje logrado (%):</label>
+        <input type="number" id="percent" min="1" max="100" required placeholder="100">
+
+        <label>Tasa de refresco (Hz):</label>
+        <input type="number" id="hz" placeholder="240" required>
+
+        <label>Link del video (YouTube/Twitch):</label>
+        <input type="url" id="video-url" required placeholder="https://youtube.com/watch?v=...">
+
+        <button type="submit" class="btn-submit">Enviar Récord</button>
+      </form>
+      <p id="submit-msg" class="submit-msg"></p>
     </section>
   </main>
 
