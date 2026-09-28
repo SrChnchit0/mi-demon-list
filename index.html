@@ -4,14 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Demon List</title>
-  <!-- Archivo de estilos CSS -->
   <link rel="stylesheet" href="./styles.css">
-  <!-- SDK oficial de Supabase -->
+  <!-- SDK de Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-  <!-- ENCABEZADO Y NAVEGACIÓN -->
   <header>
     <h1>Demon List</h1>
     <nav>
@@ -24,7 +22,6 @@
   </header>
 
   <main>
-    <!-- SECCIÓN 1: NIVELES -->
     <section id="sec-levels">
       <h2>Top Demon Levels</h2>
       <div id="levels-container">
@@ -32,7 +29,6 @@
       </div>
     </section>
 
-    <!-- SECCIÓN 2: LEADERBOARD -->
     <section id="sec-leaderboard" style="display: none;">
       <h2>Tabla de Clasificación</h2>
       <table>
@@ -50,7 +46,6 @@
       </table>
     </section>
 
-    <!-- SECCIÓN 3: SUBIR RÉCORD -->
     <section id="sec-submit" style="display: none;">
       <h2>Enviar Récord</h2>
       <form id="record-form" onsubmit="handleRecordSubmit(event)">
@@ -62,7 +57,7 @@
         <div class="form-group">
           <label for="level-select">Nivel:</label>
           <select id="level-select" required>
-            <!-- Cargas dinámicas desde JS -->
+            <!-- Opciones cargadas por JS -->
           </select>
         </div>
 
@@ -86,25 +81,22 @@
 
       <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border-color);">
 
-      <h3>Submisiones Recientes (En revisión)</h3>
-      <div id="previous-submissions">
-        <!-- Lista de envíos del usuario -->
-      </div>
+      <h3>Submisiones Recientes</h3>
+      <div id="previous-submissions"></div>
     </section>
 
-    <!-- SECCIÓN 4: REGLAS -->
     <section id="sec-rules" style="display: none;">
       <h2>Reglas de la Lista</h2>
       <ul>
         <li>Todas las completaciones deben incluir prueba en video con clicks/taps audibles.</li>
-        <li>No se permite el uso de hacks, scripts o modificadores de velocidad ilegales.</li>
-        <li>Los videos deben mostrar el intento completo sin cortes sospechosos.</li>
+        <li>No se permite el uso de hacks o modificadores de velocidad ilegales.</li>
+        <li>Los videos deben mostrar el intento completo sin cortes.</li>
       </ul>
     </section>
   </main>
 
-  <!-- MODAL DE AUTENTICACIÓN (LOGIN / REGISTRO) -->
-  <div id="auth-modal" class="modal">
+  <!-- Modal de Autenticación -->
+  <div id="auth-modal" class="modal" style="display: none;">
     <div class="modal-content">
       <span class="close-btn" onclick="closeAuthModal()">&times;</span>
       <h2 id="modal-title">Iniciar Sesión</h2>
@@ -130,7 +122,7 @@
     </div>
   </div>
 
-  <!-- Vinculación del script principal al final del body -->
-  <script src="./script2.js"></script>
+  <!-- Tu lógica de JavaScript -->
+  <script src="./script.js"></script>
 </body>
 </html>
