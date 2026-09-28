@@ -14,6 +14,7 @@
       --border-color: #333333;
       --danger-color: #e53935;
       --success-color: #43a047;
+      --gold-color: #ffd700;
     }
     * { box-sizing: border-box; }
     body {
@@ -164,6 +165,24 @@
     .clickable-player:hover {
       color: #fff;
     }
+    .leaderboard-item {
+      background: var(--card-bg);
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .rank-badge {
+      font-weight: bold;
+      font-size: 1.1rem;
+      margin-right: 15px;
+      min-width: 30px;
+      color: var(--text-muted);
+    }
+    .rank-1 { color: var(--gold-color); }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js"></script>
   <script>var vConsole = new VConsole();</script>
@@ -190,12 +209,13 @@
       <div id="levels-container"><p style="color: var(--text-muted);">Cargando niveles...</p></div>
     </section>
 
+    <!-- LEADERBOARD GENERAL DE PUNTOS -->
     <section id="sec-leaderboard" style="display: none;">
-      <h2>Tabla de Clasificación</h2>
-      <div id="leaderboard-container"><p style="color: var(--text-muted);">Cargando récords aprobados...</p></div>
+      <h2>Tabla de Clasificación (Puntuación)</h2>
+      <div id="leaderboard-container"><p style="color: var(--text-muted);">Calculando puntos...</p></div>
     </section>
 
-    <!-- SECCIÓN PARA VER EL PERFIL DE OTROS JUGADORES -->
+    <!-- SECCIÓN PARA VER PERFIL DE OTROS JUGADORES -->
     <section id="sec-view-profile" style="display: none;">
       <button onclick="showSection('leaderboard')" class="btn" style="margin-bottom: 15px;">← Volver al Leaderboard</button>
       <div id="external-profile-container"></div>
@@ -242,6 +262,10 @@
             <div class="stat-box">
               <label>🏆 Hardest Principal</label>
               <span id="prev-hardest">Ninguno</span>
+            </div>
+            <div class="stat-box">
+              <label>⭐ Puntuación Total</label>
+              <span id="prev-points">0 pts</span>
             </div>
           </div>
         </div>
@@ -316,9 +340,9 @@
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI";
     
     const DISCORD_PRIVATE_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966150277275758/guiKF0NBX1D-b3qOcjGBLx5ClICBA0ToBImdoItn-yAEea3qUIBFOx-xcnKZsXjBV1nG";
-    const DISCORD_PUBLIC_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966408369573978/Ugr9Q5-zH5gC6mdprG1AuLKToJeiRnojRVZyQYOaiyvuX_12OMNsKH9aqonGqNVCuXKW"; 
-    const ADMIN_EMAIL = "fermisael.051178@gmail.com";
-        
+    const DISCORD_PUBLIC_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966408369573978/Ugr9Q5-zH5gC6mdprG1AuLKToJeiRnojRVZyQYOaiyvuX_12OMNsKH9aqonGqNVCuXKW";
+    const ADMIN_EMAIL = "tu-correo@admin.com";
+
     let supabaseClient = null;
     let currentUser = null;
     let currentUsername = "";
@@ -358,6 +382,23 @@
         await fetchUserData(data.user);
         closeAuthModal();
       }
+    }
+
+    // Calcular puntos de un usuario basándose en sus récords aprobados
+    async function calculateUserPoints(userId) {
+      const { data: subs } = await supabaseClient.from("submissions").select("*").eq("user_id", userId).eq("status", "approved");
+      let totalPoints = 0;
+      if (subs && globalLevels.length > 0) {
+        subs.forEach(sub => {
+          const lvl = globalLevels.find(l => l.id == sub.level_id);
+          if (lvl) {
+            // Fórmula: Posición 1 da 100 pts, la posición 10 da 91 pts, etc. (Mínimo 10 pts)
+            const pts = Math.max(100 - (lvl.position - 1) * 3, 10);
+            totalPoints += pts;
+          }
+        });
+      }
+      return totalPoints;
     }
 
     async function fetchUserData(user) {
@@ -405,7 +446,8 @@
           document.getElementById("profile-hardest-select").value = profile.hardest_level_id;
         }
 
-        renderProfileCard(profile, currentUsername);
+        const points = await calculateUserPoints(user.id);
+        renderProfileCard(profile, currentUsername, points);
 
         if (adminNavBtn && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
           adminNavBtn.style.display = "block";
@@ -413,11 +455,11 @@
       }
     }
 
-    function renderProfileCard(profile, username) {
+    function renderProfileCard(profile, username, points = 0) {
       const flag = profile?.flag || '🇲🇽';
-      document.getElementById("prev-name.textContent") // dummy check
       document.getElementById("prev-name").innerHTML = `${flag} ${username}`;
       document.getElementById("prev-bio").textContent = profile?.bio || "Sin biografía configurada.";
+      document.getElementById("prev-points").textContent = `${points} pts`;
       
       const bannerEl = document.getElementById("prev-banner");
       if (profile?.banner_url) bannerEl.style.backgroundImage = `url('${profile.banner_url}')`;
@@ -457,7 +499,8 @@
         currentUsername = updates.username;
         document.getElementById("auth-btn").textContent = currentUsername;
         document.getElementById("username-display").value = currentUsername;
-        renderProfileCard(updates, currentUsername);
+        const points = await calculateUserPoints(currentUser.id);
+        renderProfileCard(updates, currentUsername, points);
       }
     }
 
@@ -475,6 +518,7 @@
       }
 
       const flag = profile.flag || '🇲🇽';
+      const points = await calculateUserPoints(userId);
       let hardestName = "Ninguno";
       if (profile.hardest_level_id) {
         const found = globalLevels.find(l => l.id == profile.hardest_level_id);
@@ -492,6 +536,10 @@
               <div class="stat-box">
                 <label>🏆 Hardest Principal</label>
                 <span>${hardestName}</span>
+              </div>
+              <div class="stat-box">
+                <label>⭐ Puntuación Total</label>
+                <span>${points} pts</span>
               </div>
             </div>
           </div>
@@ -531,52 +579,74 @@
       } catch (err) { console.error(err); }
     }
 
+    // LEADERBOARD ORDENADO POR PUNTUACIÓN DE MAYOR A MENOR
     async function loadLeaderboard() {
       const container = document.getElementById("leaderboard-container");
       if (!container || !supabaseClient) return;
 
       try {
-        const [subRes, lvlRes, profRes] = await Promise.all([
+        const [subRes, profRes] = await Promise.all([
           supabaseClient.from("submissions").select("*").eq("status", "approved"),
-          supabaseClient.from("levels").select("*"),
           supabaseClient.from("profiles").select("*")
         ]);
 
         const subs = subRes.data || [];
-        const levels = lvlRes.data || [];
         const profiles = profRes.data || [];
 
-        const levelMap = {};
-        levels.forEach(l => { levelMap[l.id] = `#${l.position} ${l.name}`; });
-
-        const profileMap = {};
-        const profileFlagMap = {};
-        profiles.forEach(p => { 
-          profileMap[p.id] = p.username; 
-          profileFlagMap[p.id] = p.flag || '🇲🇽';
-        });
-
-        if (subs.length === 0) {
-          container.innerHTML = "<p style='color: var(--text-muted);'>No hay récords aprobados aún.</p>";
+        if (profiles.length === 0) {
+          container.innerHTML = "<p style='color: var(--text-muted);'>No hay usuarios registrados aún.</p>";
           return;
         }
 
-        container.innerHTML = subs.map(sub => {
-          const playerName = profileMap[sub.user_id] || "Jugador anónimo";
-          const playerFlag = profileFlagMap[sub.user_id] || '🇲🇽';
-          const levelName = levelMap[sub.level_id] || "Nivel desconocido";
+        // Calcular puntos para cada perfil
+        let leaderboardData = [];
+        for (const p of profiles) {
+          const userSubs = subs.filter(s => s.user_id === p.id);
+          let points = 0;
+          userSubs.forEach(sub => {
+            const lvl = globalLevels.find(l => l.id == sub.level_id);
+            if (lvl) {
+              const pts = Math.max(100 - (lvl.position - 1) * 3, 10);
+              points += pts;
+            }
+          });
+
+          leaderboardData.push({
+            id: p.id,
+            username: p.username || "Jugador anónimo",
+            flag: p.flag || '🇲🇽',
+            points: points,
+            completions: userSubs.length
+          });
+        }
+
+        // Ordenar de mayor a menor puntaje
+        leaderboardData.sort((a, b) => b.points - a.points);
+
+        container.innerHTML = leaderboardData.map((user, index) => {
+          const rank = index + 1;
+          const rankClass = rank === 1 ? 'rank-1' : '';
           return `
-            <div style="background: var(--card-bg); padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <span style="font-size: 1.1rem; margin-right: 5px;">${playerFlag}</span>
-                <strong class="clickable-player" onclick="viewUserProfile('${sub.user_id}')">${playerName}</strong> completó ${levelName} (${sub.percent}%)
-                <p style="margin: 4px 0 0; font-size: 0.85rem; color: var(--text-muted);">HZ: ${sub.hz}</p>
+            <div class="leaderboard-item">
+              <div style="display: flex; align-items: center;">
+                <span class="rank-badge ${rankClass}">#${rank}</span>
+                <span style="font-size: 1.1rem; margin-right: 8px;">${user.flag}</span>
+                <div>
+                  <strong class="clickable-player" onclick="viewUserProfile('${user.id}')" style="font-size: 1.1rem;">${user.username}</strong>
+                  <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--text-muted);">${user.completions} demon(s) completados</p>
+                </div>
               </div>
-              ${sub.video_url ? `<a href="${sub.video_url}" target="_blank" class="btn" style="text-decoration: none; font-size: 0.8rem;">Ver Prueba</a>` : ''}
+              <div style="font-size: 1.1rem; font-weight: bold; color: var(--accent-color);">
+                ${user.points} pts
+              </div>
             </div>
           `;
         }).join("");
-      } catch (err) { console.error(err); }
+
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = "<p style='color: var(--danger-color);'>Error al cargar el leaderboard.</p>";
+      }
     }
 
     async function loadAdminSubmissions() {
