@@ -4,52 +4,38 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Demon List</title>
-  <link rel="stylesheet" href="style.css">
-  <!-- Supabase JS Client -->
+  <!-- Vinculación correcta al archivo de estilos -->
+  <link rel="stylesheet" href="./styles.css">
+  <!-- SDK de Supabase desde CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
   <!-- ENCABEZADO Y NAVEGACIÓN -->
   <header>
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <img src="logo.png" alt="Logo" style="height: 45px; width: auto;" onerror="this.style.display='none'">
-      <h1>Demon List</h1>
-    </div>
-    
-    <nav class="nav-tabs">
-      <button class="tab-btn active" onclick="switchTab('list')">Niveles</button>
-      <button class="tab-btn" onclick="switchTab('leaderboard')">Leaderboard</button>
-      <button class="tab-btn" onclick="switchTab('submit')">Subir Récord</button>
-      <button class="tab-btn" onclick="switchTab('rules')">Reglas</button>
+    <h1>Demon List</h1>
+    <nav>
+      <button onclick="showSection('levels')">Niveles</button>
+      <button onclick="showSection('leaderboard')">Leaderboard</button>
+      <button onclick="showSection('submit')">Subir Récord</button>
+      <button onclick="showSection('rules')">Reglas</button>
+      <button id="auth-btn" class="btn-primary" onclick="openAuthModal()">Iniciar Sesión</button>
     </nav>
-
-    <!-- Panel de Autenticación en Header -->
-    <div id="auth-container" style="display: flex; align-items: center; gap: 10px;">
-      <div id="user-logged-in" style="display: none; align-items: center; gap: 10px;">
-        <span id="user-display-name" style="color: #00f3ff; font-weight: bold;"></span>
-        <button onclick="logout()" style="background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Cerrar Sesión</button>
-      </div>
-      <div id="user-logged-out">
-        <button onclick="showAuthModal()" style="background: #00f3ff; color: #000; border: none; padding: 6px 14px; font-weight: bold; border-radius: 4px; cursor: pointer;">Iniciar Sesión</button>
-      </div>
-    </div>
   </header>
 
-  <main class="container">
-
-    <!-- SECCIÓN 1: LISTA DE NIVELES -->
-    <section id="tab-list" class="tab-content active">
+  <main>
+    <!-- SECCIÓN: NIVELES -->
+    <section id="sec-levels">
       <h2>Top Demon Levels</h2>
-      <div id="levels-container" class="grid-container">
-        <!-- Se cargan dinámicamente desde script.js -->
+      <div id="levels-container">
+        <!-- Los niveles se cargan dinámicamente con JavaScript -->
       </div>
     </section>
 
-    <!-- SECCIÓN 2: LEADERBOARD -->
-    <section id="tab-leaderboard" class="tab-content">
+    <!-- SECCIÓN: LEADERBOARD -->
+    <section id="sec-leaderboard" style="display: none;">
       <h2>Tabla de Clasificación</h2>
-      <table class="leaderboard-table">
+      <table>
         <thead>
           <tr>
             <th>Posición</th>
@@ -59,35 +45,35 @@
           </tr>
         </thead>
         <tbody id="leaderboard-body">
-          <!-- Se carga dinámicamente desde script.js -->
+          <!-- Datos dinámicos -->
         </tbody>
       </table>
     </section>
 
-    <!-- SECCIÓN 3: SUBIR RÉCORD -->
-    <section id="tab-submit" class="tab-content">
+    <!-- SECCIÓN: SUBIR RÉCORD -->
+    <section id="sec-submit" style="display: none;">
       <h2>Enviar Récord</h2>
-      <form id="record-form" onsubmit="submitRecord(event)">
+      <form id="record-form" onsubmit="handleRecordSubmit(event)">
         <div class="form-group">
           <label for="username">Jugador:</label>
-          <input type="text" id="username" placeholder="Inicia sesión para enviar" readonly required>
+          <input type="text" id="username" placeholder="Inicia sesión para enviar un récord" required disabled>
         </div>
 
         <div class="form-group">
           <label for="level-select">Nivel:</label>
           <select id="level-select" required>
-            <!-- Se carga dinámicamente -->
+            <!-- Opciones cargadas desde Supabase -->
           </select>
         </div>
 
         <div class="form-group">
           <label for="percent">Porcentaje (%):</label>
-          <input type="number" id="percent" min="1" max="100" placeholder="100" required>
+          <input type="number" id="percent" min="1" max="100" value="100" required>
         </div>
 
         <div class="form-group">
           <label for="hz">Tasa de Refresco (Hz):</label>
-          <input type="number" id="hz" placeholder="240" required>
+          <input type="number" id="hz" value="240" required>
         </div>
 
         <div class="form-group">
@@ -95,20 +81,19 @@
           <input type="url" id="video-url" placeholder="https://www.youtube.com/watch?v=..." required>
         </div>
 
-        <button type="submit" class="btn-submit">Enviar Récord</button>
-        <p id="submit-msg" class="form-msg"></p>
+        <button type="submit" class="btn btn-primary">Enviar Récord</button>
       </form>
 
-      <hr style="margin: 40px 0; border-color: #222;">
+      <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border-color);">
 
       <h3>Submisiones Recientes (En revisión)</h3>
-      <div id="previous-submissions" class="submissions-list">
-        <!-- Se cargan envíos recientes desde Supabase -->
+      <div id="previous-submissions">
+        <!-- Lista de récords del usuario -->
       </div>
     </section>
 
-    <!-- SECCIÓN 4: REGLAS -->
-    <section id="tab-rules" class="tab-content">
+    <!-- SECCIÓN: REGLAS -->
+    <section id="sec-rules" style="display: none;">
       <h2>Reglas de la Lista</h2>
       <ul>
         <li>Todas las completaciones deben incluir prueba en video con clicks/taps audibles.</li>
@@ -116,28 +101,36 @@
         <li>Los videos deben mostrar el intento completo sin cortes sospechosos.</li>
       </ul>
     </section>
-
   </main>
 
   <!-- MODAL DE AUTENTICACIÓN (LOGIN / REGISTRO) -->
-  <div id="auth-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center;">
-    <div style="background: #12151d; border: 1px solid #00f3ff; padding: 25px; border-radius: 8px; width: 320px; text-align: center; color: white;">
-      <h3 id="modal-title" style="margin-top: 0;">Iniciar Sesión</h3>
-      <form id="auth-form" onsubmit="handleAuth(event)">
-        <input type="text" id="auth-username" placeholder="Nombre de Jugador (GD)" style="width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; background: #0b0d12; color: #fff; border: 1px solid #333;" required>
-        <input type="email" id="auth-email" placeholder="Correo Electrónico" style="width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; background: #0b0d12; color: #fff; border: 1px solid #333;" required>
-        <input type="password" id="auth-password" placeholder="Contraseña" style="width: 100%; padding: 10px; margin-bottom: 15px; box-sizing: border-box; background: #0b0d12; color: #fff; border: 1px solid #333;" required>
-        
-        <button type="submit" id="auth-submit-btn" style="width: 100%; padding: 10px; background: #00f3ff; color: #000; font-weight: bold; border: none; cursor: pointer; border-radius: 4px;">Entrar</button>
-      </form>
+  <div id="auth-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeAuthModal()">&times;</span>
+      <h2 id="modal-title">Iniciar Sesión</h2>
       
-      <p style="font-size: 0.85em; margin-top: 15px;">
-        <a href="#" id="toggle-auth-mode" onclick="toggleAuthMode(event)" style="color: #ff0055; text-decoration: none;">¿No tienes cuenta? Regístrate aquí</a>
+      <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+        <div class="form-group">
+          <label for="auth-email">Correo Electrónico:</label>
+          <input type="email" id="auth-email" placeholder="tu@correo.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="auth-password">Contraseña:</label>
+          <input type="password" id="auth-password" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" id="auth-submit-btn" class="btn btn-primary">Entrar</button>
+      </form>
+
+      <p style="margin-top: 15px; font-size: 0.9rem; text-align: center;">
+        <span id="auth-switch-text">¿No tienes cuenta?</span>
+        <a href="#" onclick="toggleAuthMode(event)" id="auth-switch-link" style="color: var(--accent-color);">Regístrate</a>
       </p>
-      <button onclick="closeAuthModal()" style="background: transparent; color: #aaa; border: none; cursor: pointer; margin-top: 10px;">Cancelar</button>
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <!-- Vinculación al script principal de JavaScript -->
+  <script src="./script.js"></script>
 </body>
 </html>
