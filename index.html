@@ -189,7 +189,7 @@
     const SUPABASE_URL = "https://jdvgdgiomrbmlxvvjvhd.supabase.co"; 
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI";
     
-    // URL de tu Webhook de Discord integrada
+    // URL del Webhook de Discord
     const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966150277275758/guiKF0NBX1D-b3qOcjGBLx5ClICBA0ToBImdoItn-yAEea3qUIBFOx-xcnKZsXjBV1nG";
 
     let supabaseClient = null;
@@ -328,32 +328,51 @@
         return;
       }
 
-      // 2. Notificar automáticamente en Discord
+      // 2. Notificar en Discord usando un proxy para saltar el bloqueo de CORS del navegador
+      const payload = {
+        embeds: [{
+          title: "🏆 ¡Nuevo Récord Enviado!",
+          color: 3066993,
+          fields: [
+            { name: "Usuario", value: currentUser.email, inline: true },
+            { name: "Nivel", value: level_name, inline: true },
+            { name: "Porcentaje", value: `${percent}%`, inline: true },
+            { name: "Tasa de refresco", value: `${hz} Hz`, inline: true },
+            { name: "Video / Prueba", value: video_url }
+          ],
+          footer: { text: "Demon List Bot • Pendiente de revisión" },
+          timestamp: new Date().toISOString()
+        }]
+      };
+
       try {
-        await fetch(DISCORD_WEBHOOK_URL, {
+        let res = await fetch(DISCORD_WEBHOOK_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            embeds: [{
-              title: "🏆 ¡Nuevo Récord Enviado!",
-              color: 3066993, // Color cian de la Demon List
-              fields: [
-                { name: "Usuario", value: currentUser.email, inline: true },
-                { name: "Nivel", value: level_name, inline: true },
-                { name: "Porcentaje", value: `${percent}%`, inline: true },
-                { name: "Tasa de refresco", value: `${hz} Hz`, inline: true },
-                { name: "Video / Prueba", value: video_url }
-              ],
-              footer: { text: "Demon List Bot • Pendiente de revisión" },
-              timestamp: new Date().toISOString()
-            }]
-          })
+          body: JSON.stringify(payload)
         });
+
+        if (!res.ok) {
+          await fetch("https://corsproxy.io/?" + encodeURIComponent(DISCORD_WEBHOOK_URL), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+        }
       } catch (err) {
-        console.error("Error al enviar a Discord:", err);
+        console.log("Intentando vía proxy por posible restricción CORS...");
+        try {
+          await fetch("https://corsproxy.io/?" + encodeURIComponent(DISCORD_WEBHOOK_URL), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+        } catch (proxyErr) {
+          console.error("Error al notificar en Discord:", proxyErr);
+        }
       }
 
-      alert("¡Récord enviado con éxito y notificado en Discord!");
+      alert("¡Récord enviado a la base de datos y notificado en Discord!");
       document.getElementById("record-form").reset();
     }
 
