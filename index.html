@@ -824,12 +824,11 @@
     const lvl = globalLevels.find(l => l.id == level_id);
     const levelName = lvl ? `#${lvl.position} ${lvl.name}` : "un nivel";
 
-    // Envía la tarjeta elegante al canal privado de staff en Discord
     await sendDiscordEmbed(
       DISCORD_PRIVATE_WEBHOOK_URL,
       "📥 Nuevo Récord Pendiente de Revisión",
       `El usuario **${currentUsername}** ha enviado un nuevo récord para revisión.`,
-      0x00ffcc, // Color Cian/Azul
+      0x00ffcc, 
       [
         { name: "Nivel", value: levelName, inline: true },
         { name: "Progreso", value: `${percent}%`, inline: true },
