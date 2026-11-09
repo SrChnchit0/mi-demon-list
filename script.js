@@ -300,7 +300,8 @@ async function loadLevels() {
 }
 
 async function openLevelDetails(levelId) {
-    const lvl = globalLevels.find(l => String(l.id).trim() === String(levelId).trim());
+    const cleanTargetId = String(levelId).trim();
+    const lvl = globalLevels.find(l => String(l.id).trim() === cleanTargetId);
     if (!lvl) return;
 
     ["levels", "leaderboard", "submit", "profile", "admin", "rules", "view-profile"].forEach(s => {
@@ -325,13 +326,12 @@ async function openLevelDetails(levelId) {
     const records = allRecords.filter(r => {
         const isApproved = r.status && ["approved", "aprobado"].includes(String(r.status).toLowerCase());
         
-        // Comprobación múltiple y segura para asegurar el match del nivel
+        // Limpieza profunda de ambos IDs para asegurar el match sin importar si son números o textos
         const subLevelId = r.level_id !== null && r.level_id !== undefined ? String(r.level_id).trim() : "";
-        const targetLevelId = levelId !== null && levelId !== undefined ? String(levelId).trim() : "";
-        const lvlObjId = lvl.id !== null && lvl.id !== undefined ? String(lvl.id).trim() : "";
-        const lvlObjPos = lvl.position !== null && lvl.position !== undefined ? String(lvl.position).trim() : "";
+        const currentLvlId = lvl.id !== null && lvl.id !== undefined ? String(lvl.id).trim() : "";
+        const currentLvlPos = lvl.position !== null && lvl.position !== undefined ? String(lvl.position).trim() : "";
 
-        const matchesLevel = (subLevelId === targetLevelId) || (subLevelId === lvlObjId) || (subLevelId === lvlObjPos);
+        const matchesLevel = (subLevelId === cleanTargetId) || (subLevelId === currentLvlId) || (subLevelId === currentLvlPos);
 
         return isApproved && matchesLevel;
     });
