@@ -325,12 +325,12 @@ async function openLevelDetails(levelId) {
     const records = allRecords.filter(r => {
         const isApproved = r.status && ["approved", "aprobado"].includes(String(r.status).toLowerCase());
         
-        const subLvl = String(r.level_id).trim();
-        // Comparamos contra el ID, la posición o incluso si el registro guardó el nombre del nivel
-        const matchesId = subLvl === String(lvl.id).trim();
-        const matchesPos = subLvl === String(lvl.position).trim();
+        const subLvl = String(r.level_id).trim().toLowerCase();
+        const matchesId = subLvl === String(lvl.id).trim().toLowerCase();
+        const matchesPos = subLvl === String(lvl.position).trim().toLowerCase();
+        const matchesName = subLvl === String(lvl.name).trim().toLowerCase();
 
-        return isApproved && (matchesId || matchesPos);
+        return isApproved && (matchesId || matchesPos || matchesName);
     });
 
     records.sort((a, b) => (Number(b.percent) || 0) - (Number(a.percent) || 0));
@@ -369,6 +369,10 @@ async function openLevelDetails(levelId) {
     `;
 }
 
+function closeLevelDetails() {
+    document.getElementById("level-detail-view").style.display = "none";
+    showSection('levels');
+}
 
 async function loadLeaderboard() {
   const container = document.getElementById("leaderboard-container");
