@@ -324,8 +324,13 @@ async function openLevelDetails(levelId) {
 
     const records = allRecords.filter(r => {
         const isApproved = r.status && ["approved", "aprobado"].includes(String(r.status).toLowerCase());
-        const matchesLevel = String(r.level_id).trim() === String(lvl.id).trim();
-        return isApproved && matchesLevel;
+        
+        // Comparamos tanto el ID del nivel como su posición por si submissions usa números de posición
+        const subLvl = String(r.level_id).trim();
+        const matchesId = subLvl === String(lvl.id).trim();
+        const matchesPos = subLvl === String(lvl.position).trim();
+
+        return isApproved && (matchesId || matchesPos);
     });
 
     records.sort((a, b) => (Number(b.percent) || 0) - (Number(a.percent) || 0));
@@ -362,11 +367,6 @@ async function openLevelDetails(levelId) {
         <h3 style="color: var(--text-color);">🏆 Récords Aprobados</h3>
         <div>${recordsHtml || '<p style="color: var(--text-muted);">Aún no hay récords aprobados para este nivel.</p>'}</div>
     `;
-}
-
-function closeLevelDetails() {
-    document.getElementById("level-detail-view").style.display = "none";
-    showSection('levels');
 }
 
 async function loadLeaderboard() {
