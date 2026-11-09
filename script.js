@@ -302,7 +302,6 @@ async function loadLevels() {
 }
 
 async function openLevelDetails(levelId) {
-    // Buscamos el nivel comparando contra el ID (UUID) o la posición
     const lvl = globalLevels.find(l => 
         String(l.id).trim() === String(levelId).trim() || 
         String(l.position).trim() === String(levelId).trim()
@@ -328,6 +327,15 @@ async function openLevelDetails(levelId) {
     const profileMap = {};
     profiles.forEach(p => { profileMap[p.id] = p; });
 
+    // --- DEPURACIÓN EN CONSOLA ---
+    console.log("-----------------------------------------");
+    console.log("Abriendo detalles para el nivel:", lvl.name, "| ID:", lvl.id, "| Posición:", lvl.position);
+    console.log("Total de submissions descargadas de Supabase:", allRecords.length);
+    if(allRecords.length > 0) {
+        console.log("Ejemplo de submission de la BD -> level_id:", allRecords[0].level_id, "| status:", allRecords[0].status);
+    }
+    // -----------------------------
+
     const records = allRecords.filter(r => {
         const statusStr = String(r.status || "").trim().toLowerCase();
         const isApproved = ["approved", "aprobado"].includes(statusStr);
@@ -336,9 +344,12 @@ async function openLevelDetails(levelId) {
         const targetId = String(lvl.id || "").trim();
         const targetPos = String(lvl.position || "").trim();
 
-        // Comparamos el level_id de la submission contra el UUID del nivel o contra su posición numérica
-        return isApproved && (subLevelId === targetId || subLevelId === targetPos);
+        const matches = subLevelId === targetId || subLevelId === targetPos;
+        return isApproved && matches;
     });
+
+    console.log("Récords aprobados que SÍ pasaron el filtro para este nivel:", records);
+    console.log("-----------------------------------------");
 
     records.sort((a, b) => (Number(b.percent) || 0) - (Number(a.percent) || 0));
 
@@ -372,7 +383,7 @@ async function openLevelDetails(levelId) {
             </div>
         </div>
         <h3 style="color: var(--text-color);">🏆 Récords Aprobados</h3>
-        <div>${recordsHtml || '<p style="color: var(--text-muted);">Aún no hay récords aprobados para este nivel.</p>'}</div>
+        <div>${recordsHtml || '<p style="color: var(--text-muted);">Aún no hay récords aprobados para este nivel. (Revisa la consola para ver qué contiene level_id)</p>'}</div>
     `;
 }
 
