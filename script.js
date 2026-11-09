@@ -300,17 +300,20 @@ async function openLevelDetails(levelId) {
 
     const thumb = getYouTubeThumbnail(lvl.video_url);
 
-    // 1. Traemos los récords aprobados del nivel
-    const { data: records, error } = await supabaseClient
+    // Traemos TODOS los récords aprobados sin filtrar por ID estricto primero para depurar
+    const { data: allRecords, error } = await supabaseClient
         .from("submissions")
-        .select("percent, video_url, image_url, user_notes, user_id, status")
-        .eq("level_id", levelId)
-        .ilike("status", "approved")
-        .order("percent", { ascending: false });
+        .select("percent, video_url, image_url, user_notes, user_id, status, level_id")
+        .ilike("status", "approved");
+
+    console.log("Nivel actual clickeado ID:", levelId);
+    console.log("Todos los récords aprobados en la BD:", allRecords);
+
+    // Filtramos en JavaScript para asegurar que coincida con el nivel actual (por ID o por posición si aplica)
+    const records = (allRecords || []).filter(r => String(r.level_id) === String(levelId));
 
     let recordsHtml = "";
     if (records && records.length > 0) {
-        // 2. Traemos todos los perfiles de golpe para mapearlos de forma segura
         const { data: profiles } = await supabaseClient.from("profiles").select("id, username, flag");
         const profileMap = {};
         if (profiles) {
@@ -334,7 +337,7 @@ async function openLevelDetails(levelId) {
     }
 
     detailContainer.innerHTML = `
-        <button onclick="closeLevelDetails()" class="btn" style="margin-bottom: 20px;">⬅ Volver a la Lista</button>
+        <button onclick="closeLevelDetails()" class="btn" style="margin-bottom: 20px;">⬅ Volver al Leaderboard</button>
         <div class="profile-card" style="margin-bottom: 20px;">
             <div class="level-banner" style="${thumb ? `background-image: url('${thumb}')` : 'background: #18181b'}"></div>
             <div style="padding: 24px;">
