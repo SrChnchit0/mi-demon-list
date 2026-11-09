@@ -300,31 +300,36 @@ async function openLevelDetails(levelId) {
 
     const thumb = getYouTubeThumbnail(lvl.video_url);
 
-    // Traemos TODOS los récords aprobados y perfiles directamente
-    const [subRes, profRes] = await Promise.all([
-        supabaseClient.from("submissions").select("*").ilike("status", "approved"),
-        supabaseClient.from("profiles").select("id, username, flag")
-    ]);
+    // Hacemos una consulta limpia para ver las columnas reales
+    const { data: allRecords, error } = await supabaseClient
+        .from("submissions")
+        .select("*");
 
-    const allRecords = subRes.data || [];
-    const profiles = profRes.data || [];
-    const profileMap = {};
-    profiles.forEach(p => { profileMap[p.id] = p; });
+    console.log("¡CONTENIDO REAL DE SUPABASE EN SUBMISSIONS:", allRecords);
+    console.log("Error de Supabase (si hay alguno):", error);
 
-    console.log("Nivel seleccionado actual:", lvl);
-    console.log("Todos los récords aprobados en Supabase:", allRecords);
-
-    // Filtramos de forma flexible: por level_id exacto O si coincide con el nombre/posición del nivel
-    const records = allRecords.filter(r => {
-        return String(r.level_id) === String(levelId) || 
-               String(r.level_id) === String(lvl.position) ||
-               String(r.level_id) === String(lvl.name);
+    // Filtramos de forma muy flexible para cazar cualquier coincidencia
+    const records = (allRecords || []).filter(r => {
+        const matchesStatus = r.status && String(r.status).toLowerCase() === 'approved';
+        const matchesLevel = String(r.level_id) === String(levelId) || 
+                             String(r.level_id) === String(lvl.id) || 
+                             String(r.level_id) === String(lvl.position) ||
+                             String(r.level_id) === String(lvl.name);
+        return matchesStatus && matchesLevel;
     });
 
     let recordsHtml = "";
     if (records && records.length > 0) {
+        const { data: profiles } = await supabaseClient.from("profiles").select("*");
+        const profileMap = {};
+        if (profiles) {
+            profiles.forEach(p => { profileMap[p.id] = p; });
+        }
+
         recordsHtml = records.map(r => {
-            const prof = profileMap[r.user_id] || { username: "Jugador Anónimo", flag: "🇲🇽" };
+            // Buscamos el perfil usando user_id o userid por si cambia el nombre de la columna
+            const userIdKey = r.user_id || r.userid;
+            const prof = profileMap[userIdKey] || { username: "Jugador Anónimo", flag: "🇲🇽" };
             const proof = r.video_url || r.image_url;
             
             return `
@@ -338,6 +343,22 @@ async function openLevelDetails(levelId) {
             `;
         }).join('');
     }
+
+    detailContainer.innerHTML = `
+        <button onclick="closeLevelDetails()" class="btn" style="margin-bottom: 20px;">⬅ Volver a la Lista</button>
+        <div class="profile-card" style="margin-bottom: 20px;">
+            <div class="level-banner" style="${thumb ? `background-image: url('${thumb}')` : 'background: #18181b'}"></div>
+            <div style="padding: 24px;">
+                <h2 style="margin: 0 0 10px 0; border: none; padding: 0; color: var(--accent-color);">#${lvl.position} - ${lvl.name}</h2>
+                <p style="color: var(--text-muted); margin: 4px 0;">Creador: <b>${lvl.creator || 'Desconocido'}</b></p>
+                <p style="color: var(--text-muted); margin: 4px 0;">Puntos otorgados: <b>${lvl.points || 50} pts</b></p>
+                ${lvl.video_url ? `<p style="margin-top: 10px;"><a href="${lvl.video_url}" target="_blank" class="btn btn-primary" style="text-decoration:none; display:inline-block;">Ver Video del Nivel</a></p>` : ''}
+            </div>
+        </div>
+        <h3 style="color: var(--text-color);">🏆 Récords Aprobados</h3>
+        <div>${recordsHtml || '<p style="color: var(--text-muted);">Aún no hay récords aprobados para este nivel.</p>'}</div>
+    `;
+}
 
     detailContainer.innerHTML = `
         <button onclick="closeLevelDetails()" class="btn" style="margin-bottom: 20px;">⬅ Volver a la Lista</button>
