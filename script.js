@@ -300,33 +300,31 @@ async function openLevelDetails(levelId) {
 
     const thumb = getYouTubeThumbnail(lvl.video_url);
 
-    // Consulta con fallback para obtener récords y asociar perfiles
+    // 1. Traemos los récords aprobados del nivel
     const { data: records, error } = await supabaseClient
         .from("submissions")
-        .select(`
-            percent, 
-            video_url, 
-            image_url, 
-            user_notes,
-            status, 
-            profiles (username, flag)
-        `)
+        .select("percent, video_url, image_url, user_notes, user_id, status")
         .eq("level_id", levelId)
         .ilike("status", "approved")
         .order("percent", { ascending: false });
 
     let recordsHtml = "";
     if (records && records.length > 0) {
+        // 2. Traemos todos los perfiles de golpe para mapearlos de forma segura
+        const { data: profiles } = await supabaseClient.from("profiles").select("id, username, flag");
+        const profileMap = {};
+        if (profiles) {
+            profiles.forEach(p => { profileMap[p.id] = p; });
+        }
+
         recordsHtml = records.map(r => {
-            const prof = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
-            const username = prof?.username || "Jugador";
-            const flag = prof?.flag || "";
+            const prof = profileMap[r.user_id] || { username: "Jugador Anónimo", flag: "🇲🇽" };
             const proof = r.video_url || r.image_url;
             
             return `
                 <div class="list-item" style="display: block; margin-bottom: 8px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>${flag} <b>${username}</b> - ${r.percent}%</span>
+                        <span>${prof.flag || ''} <b>${prof.username}</b> - ${r.percent}%</span>
                         ${proof ? `<a href="${proof}" target="_blank" class="btn" style="font-size: 0.8rem; text-decoration: none;">Ver Prueba</a>` : ''}
                     </div>
                     ${r.user_notes ? `<p style="margin: 6px 0 0; font-size: 0.85rem; color: var(--text-muted);">"${r.user_notes}"</p>` : ''}
@@ -349,11 +347,6 @@ async function openLevelDetails(levelId) {
         <h3 style="color: var(--text-color);">🏆 Récords Aprobados</h3>
         <div>${recordsHtml || '<p style="color: var(--text-muted);">Aún no hay récords aprobados para este nivel.</p>'}</div>
     `;
-}
-
-function closeLevelDetails() {
-    document.getElementById("level-detail-view").style.display = "none";
-    showSection('levels');
 }
 
 async function loadLeaderboard() {
