@@ -354,6 +354,7 @@ async function openLevelDetails(levelId) {
         <div>${recordsHtml || '<p style="color: var(--text-muted);">Aún no hay récords aprobados para este nivel.</p>'}</div>
     `;
 }
+
 async function loadLeaderboard() {
   const container = document.getElementById("leaderboard-container");
   if (!container || !supabaseClient) return;
