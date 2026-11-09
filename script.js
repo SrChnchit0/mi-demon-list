@@ -322,9 +322,11 @@ async function openLevelDetails(levelId) {
     const profileMap = {};
     profiles.forEach(p => { profileMap[p.id] = p; });
 
-    const records = allRecords.filter(r => {
+        const records = allRecords.filter(r => {
         const isApproved = r.status && ["approved", "aprobado"].includes(String(r.status).toLowerCase());
-        const matchesLevel = String(r.level_id).trim() === String(levelId).trim();
+        const subLevelId = r.level_id !== null && r.level_id !== undefined ? String(r.level_id).trim() : "";
+        const targetLevelId = levelId !== null && levelId !== undefined ? String(levelId).trim() : "";
+        const matchesLevel = subLevelId === targetLevelId;
         return isApproved && matchesLevel;
     });
 
