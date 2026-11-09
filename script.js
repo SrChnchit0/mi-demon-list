@@ -302,7 +302,11 @@ async function loadLevels() {
 }
 
 async function openLevelDetails(levelId) {
-    const lvl = globalLevels.find(l => String(l.id).trim() === String(levelId).trim());
+    // Buscamos el nivel comparando contra el ID (UUID) o la posición
+    const lvl = globalLevels.find(l => 
+        String(l.id).trim() === String(levelId).trim() || 
+        String(l.position).trim() === String(levelId).trim()
+    );
     if (!lvl) return;
 
     ["levels", "leaderboard", "submit", "profile", "admin", "rules", "view-profile"].forEach(s => {
@@ -329,16 +333,11 @@ async function openLevelDetails(levelId) {
         const isApproved = ["approved", "aprobado"].includes(statusStr);
         
         const subLevelId = String(r.level_id || "").trim();
-        const levelPos = String(lvl.position || "").trim();
-        const levelIdStr = String(lvl.id || "").trim();
-        const levelNameStr = String(lvl.name || "").trim().toLowerCase();
-        const subLevelNameStr = subLevelId.toLowerCase();
+        const targetId = String(lvl.id || "").trim();
+        const targetPos = String(lvl.position || "").trim();
 
-        return isApproved && (
-            subLevelId === levelPos || 
-            subLevelId === levelIdStr || 
-            subLevelNameStr === levelNameStr
-        );
+        // Comparamos el level_id de la submission contra el UUID del nivel o contra su posición numérica
+        return isApproved && (subLevelId === targetId || subLevelId === targetPos);
     });
 
     records.sort((a, b) => (Number(b.percent) || 0) - (Number(a.percent) || 0));
@@ -375,11 +374,6 @@ async function openLevelDetails(levelId) {
         <h3 style="color: var(--text-color);">🏆 Récords Aprobados</h3>
         <div>${recordsHtml || '<p style="color: var(--text-muted);">Aún no hay récords aprobados para este nivel.</p>'}</div>
     `;
-}
-
-function closeLevelDetails() {
-    document.getElementById("level-detail-view").style.display = "none";
-    showSection('levels');
 }
 
 async function loadLeaderboard() {
