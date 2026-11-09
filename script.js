@@ -92,7 +92,7 @@ async function calculateUserPoints(userId) {
     subs.forEach(sub => {
       const isApproved = sub.status && String(sub.status).toLowerCase() === "approved";
       if (isApproved && String(sub.user_id) === String(userId)) {
-        const lvl = globalLevels.find(l => String(l.id) === String(sub.level_id));
+        const lvl = globalLevels.find(l => String(l.id).trim() === String(sub.level_id).trim());
         if (lvl) {
           totalPoints += (lvl.points || 50);
         }
@@ -235,7 +235,7 @@ async function viewUserProfile(userId) {
   }
 
   let completedHtml = userSubs.map(r => {
-    const lvl = globalLevels.find(l => String(l.id) === String(r.level_id));
+    const lvl = globalLevels.find(l => String(l.id).trim() === String(r.level_id).trim());
     if (!lvl) return '';
     return `<li style="margin-bottom: 6px;">#${lvl.position} ${lvl.name} (${r.percent}%) - <b style="color: var(--accent-color);">+${lvl.points || 50} pts</b></li>`;
   }).join('');
@@ -300,7 +300,7 @@ async function loadLevels() {
 }
 
 async function openLevelDetails(levelId) {
-    const lvl = globalLevels.find(l => String(l.id) === String(levelId));
+    const lvl = globalLevels.find(l => String(l.id).trim() === String(levelId).trim());
     if (!lvl) return;
 
     ["levels", "leaderboard", "submit", "profile", "admin", "rules", "view-profile"].forEach(s => {
@@ -324,7 +324,8 @@ async function openLevelDetails(levelId) {
 
     const records = allRecords.filter(r => {
         const isApproved = r.status && String(r.status).toLowerCase() === "approved";
-        return isApproved && String(r.level_id) === String(levelId);
+        const matchesLevel = String(r.level_id).trim() === String(levelId).trim();
+        return isApproved && matchesLevel;
     });
 
     records.sort((a, b) => (Number(b.percent) || 0) - (Number(a.percent) || 0));
@@ -395,7 +396,7 @@ async function loadLeaderboard() {
 
       let points = 0;
       userSubs.forEach(sub => {
-        const lvl = globalLevels.find(l => String(l.id) === String(sub.level_id));
+        const lvl = globalLevels.find(l => String(l.id).trim() === String(sub.level_id).trim());
         if (lvl) {
           points += (lvl.points || 50);
         }
@@ -490,7 +491,7 @@ async function updateSubmissionStatus(id, newStatus) {
   const { data: updatedSub } = await supabaseClient.from("submissions").update({ status: newStatus, admin_notes }).eq("id", id).select().single();
   
   if (updatedSub) {
-    const lvl = globalLevels.find(l => String(l.id) === String(updatedSub.level_id));
+    const lvl = globalLevels.find(l => String(l.id).trim() === String(updatedSub.level_id).trim());
     const levelName = lvl ? `#${lvl.position} ${lvl.name}` : "un nivel";
     const proofUrl = updatedSub.video_url || updatedSub.image_url;
     
@@ -578,7 +579,7 @@ async function handleRecordSubmit(e) {
     alert("¡Récord enviado!");
     document.getElementById("record-form").reset();
     
-    const lvl = globalLevels.find(l => String(l.id) === String(level_id));
+    const lvl = globalLevels.find(l => String(l.id).trim() === String(level_id).trim());
     const levelName = lvl ? `#${lvl.position} ${lvl.name}` : "un nivel";
     const proofLink = video_url ? `[Ver video](${video_url})` : `[Ver foto de prueba](${image_url})`;
 
