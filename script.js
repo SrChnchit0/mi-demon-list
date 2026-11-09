@@ -90,7 +90,7 @@ async function calculateUserPoints(userId) {
   let totalPoints = 0;
   if (subs && globalLevels.length > 0) {
     subs.forEach(sub => {
-      const isApproved = sub.status && String(sub.status).toLowerCase() === "approved";
+      const isApproved = sub.status && ["approved", "aprobado"].includes(String(sub.status).toLowerCase());
       if (isApproved && String(sub.user_id) === String(userId)) {
         const lvl = globalLevels.find(l => String(l.id).trim() === String(sub.level_id).trim());
         if (lvl) {
@@ -217,7 +217,7 @@ async function viewUserProfile(userId) {
 
   const profile = profileRes.data;
   const userSubs = (subsRes.data || []).filter(s => {
-    const isApproved = s.status && String(s.status).toLowerCase() === "approved";
+    const isApproved = s.status && ["approved", "aprobado"].includes(String(s.status).toLowerCase());
     return isApproved && String(s.user_id) === String(userId);
   });
 
@@ -323,7 +323,7 @@ async function openLevelDetails(levelId) {
     profiles.forEach(p => { profileMap[p.id] = p; });
 
     const records = allRecords.filter(r => {
-        const isApproved = r.status && String(r.status).toLowerCase() === "approved";
+        const isApproved = r.status && ["approved", "aprobado"].includes(String(r.status).toLowerCase());
         const matchesLevel = String(r.level_id).trim() === String(levelId).trim();
         return isApproved && matchesLevel;
     });
@@ -390,7 +390,7 @@ async function loadLeaderboard() {
     let leaderboardData = [];
     for (const p of profiles) {
       const userSubs = subs.filter(s => {
-        const isApproved = s.status && String(s.status).toLowerCase() === "approved";
+        const isApproved = s.status && ["approved", "aprobado"].includes(String(s.status).toLowerCase());
         return isApproved && String(s.user_id) === String(p.id);
       });
 
@@ -601,16 +601,13 @@ async function handleRecordSubmit(e) {
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("--- INICIANDO DIAGNÓSTICO ---");
   
-  // 1. Probamos lectura de niveles
   const { data: levels, error: lvlError } = await supabaseClient.from("levels").select("*");
   console.log("Niveles cargados desde Supabase:", levels, lvlError);
   globalLevels = levels || [];
 
-  // 2. Probamos lectura de submissions
   const { data: subs, error: subError } = await supabaseClient.from("submissions").select("*");
   console.log("Envíos cargados desde Supabase:", subs, subError);
 
-  // 3. Probamos lectura de perfiles
   const { data: profs, error: profError } = await supabaseClient.from("profiles").select("*");
   console.log("Perfiles cargados desde Supabase:", profs, profError);
 
