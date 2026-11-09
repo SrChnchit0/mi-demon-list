@@ -322,16 +322,26 @@ async function openLevelDetails(levelId) {
     const profileMap = {};
     profiles.forEach(p => { profileMap[p.id] = p; });
 
+    // --- DEPURACIÓN VISIBLE ---
+    console.log("=== ABRIENDO NIVEL ===");
+    console.log("Nivel objeto seleccionado:", lvl);
+    console.log("ID buscado (levelId):", levelId);
+    console.log("Todos los récords en la BD:", allRecords);
+    if(allRecords.length > 0) {
+        console.log("Ejemplo del primer récord -> status:", allRecords[0].status, "| level_id:", allRecords[0].level_id);
+    }
+    // --------------------------
+
     const records = allRecords.filter(r => {
         const isApproved = r.status && ["approved", "aprobado"].includes(String(r.status).toLowerCase());
-        
-        // Comparamos tanto el ID del nivel como su posición por si submissions usa números de posición
         const subLvl = String(r.level_id).trim();
         const matchesId = subLvl === String(lvl.id).trim();
         const matchesPos = subLvl === String(lvl.position).trim();
 
         return isApproved && (matchesId || matchesPos);
     });
+
+    console.log("Récords que pasaron el filtro:", records);
 
     records.sort((a, b) => (Number(b.percent) || 0) - (Number(a.percent) || 0));
 
@@ -364,8 +374,8 @@ async function openLevelDetails(levelId) {
                 ${lvl.video_url ? `<p style="margin-top: 10px;"><a href="${lvl.video_url}" target="_blank" class="btn btn-primary" style="text-decoration:none; display:inline-block;">Ver Video del Nivel</a></p>` : ''}
             </div>
         </div>
-        <h3 style="color: var(--text-color);">🏆 Récords Aprobados</h3>
-        <div>${recordsHtml || '<p style="color: var(--text-muted);">Aún no hay récords aprobados para este nivel.</p>'}</div>
+        <h3 style="color: var(---text-color);">🏆 Récords Aprobados</h3>
+        <div>${recordsHtml || '<p style="color: var(--text-muted);">Aún no hay récords aprobados para este nivel. (Revisa la consola del navegador para ver qué ID busca)</p>'}</div>
     `;
 }
 
