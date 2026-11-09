@@ -322,11 +322,17 @@ async function openLevelDetails(levelId) {
     const profileMap = {};
     profiles.forEach(p => { profileMap[p.id] = p; });
 
-        const records = allRecords.filter(r => {
+    const records = allRecords.filter(r => {
         const isApproved = r.status && ["approved", "aprobado"].includes(String(r.status).toLowerCase());
+        
+        // Comprobación múltiple y segura para asegurar el match del nivel
         const subLevelId = r.level_id !== null && r.level_id !== undefined ? String(r.level_id).trim() : "";
         const targetLevelId = levelId !== null && levelId !== undefined ? String(levelId).trim() : "";
-        const matchesLevel = subLevelId === targetLevelId;
+        const lvlObjId = lvl.id !== null && lvl.id !== undefined ? String(lvl.id).trim() : "";
+        const lvlObjPos = lvl.position !== null && lvl.position !== undefined ? String(lvl.position).trim() : "";
+
+        const matchesLevel = (subLevelId === targetLevelId) || (subLevelId === lvlObjId) || (subLevelId === lvlObjPos);
+
         return isApproved && matchesLevel;
     });
 
@@ -364,11 +370,6 @@ async function openLevelDetails(levelId) {
         <h3 style="color: var(--text-color);">🏆 Récords Aprobados</h3>
         <div>${recordsHtml || '<p style="color: var(--text-muted);">Aún no hay récords aprobados para este nivel.</p>'}</div>
     `;
-}
-
-function closeLevelDetails() {
-    document.getElementById("level-detail-view").style.display = "none";
-    showSection('levels');
 }
 
 async function loadLeaderboard() {
