@@ -90,7 +90,8 @@ async function calculateUserPoints(userId) {
   let totalPoints = 0;
   if (subs && globalLevels.length > 0) {
     subs.forEach(sub => {
-      const isApproved = sub.status && ["approved", "aprobado"].includes(String(sub.status).toLowerCase());
+      const statusStr = String(sub.status || "").trim().toLowerCase();
+      const isApproved = ["approved", "aprobado"].includes(statusStr);
       if (isApproved && String(sub.user_id) === String(userId)) {
         const lvl = globalLevels.find(l => String(l.position).trim() === String(sub.level_id).trim() || String(l.id).trim() === String(sub.level_id).trim());
         if (lvl) {
@@ -217,7 +218,8 @@ async function viewUserProfile(userId) {
 
   const profile = profileRes.data;
   const userSubs = (subsRes.data || []).filter(s => {
-    const isApproved = s.status && ["approved", "aprobado"].includes(String(s.status).toLowerCase());
+    const statusStr = String(s.status || "").trim().toLowerCase();
+    const isApproved = ["approved", "aprobado"].includes(statusStr);
     return isApproved && String(s.user_id) === String(userId);
   });
 
@@ -323,14 +325,20 @@ async function openLevelDetails(levelId) {
     profiles.forEach(p => { profileMap[p.id] = p; });
 
     const records = allRecords.filter(r => {
-        const isApproved = r.status && ["approved", "aprobado"].includes(String(r.status).toLowerCase());
+        const statusStr = String(r.status || "").trim().toLowerCase();
+        const isApproved = ["approved", "aprobado"].includes(statusStr);
         
-        // Coincidencia con la posición del nivel guardada en submissions (ej: 1, 15, etc.)[span_1](start_span)[span_1](end_span)
-        const subLevelId = String(r.level_id).trim();
-        const levelPos = String(lvl.position).trim();
-        const levelIdStr = String(lvl.id).trim();
+        const subLevelId = String(r.level_id || "").trim();
+        const levelPos = String(lvl.position || "").trim();
+        const levelIdStr = String(lvl.id || "").trim();
+        const levelNameStr = String(lvl.name || "").trim().toLowerCase();
+        const subLevelNameStr = subLevelId.toLowerCase();
 
-        return isApproved && (subLevelId === levelPos || subLevelId === levelIdStr);
+        return isApproved && (
+            subLevelId === levelPos || 
+            subLevelId === levelIdStr || 
+            subLevelNameStr === levelNameStr
+        );
     });
 
     records.sort((a, b) => (Number(b.percent) || 0) - (Number(a.percent) || 0));
@@ -395,7 +403,8 @@ async function loadLeaderboard() {
     let leaderboardData = [];
     for (const p of profiles) {
       const userSubs = subs.filter(s => {
-        const isApproved = s.status && ["approved", "aprobado"].includes(String(s.status).toLowerCase());
+        const statusStr = String(s.status || "").trim().toLowerCase();
+        const isApproved = ["approved", "aprobado"].includes(statusStr);
         return isApproved && String(s.user_id) === String(p.id);
       });
 
@@ -455,7 +464,10 @@ async function loadAdminSubmissions() {
       supabaseClient.from("profiles").select("*")
     ]);
 
-    const pendingSubs = (subRes.data || []).filter(sub => sub.status && sub.status.toLowerCase() === "pending");
+    const pendingSubs = (subRes.data || []).filter(sub => {
+      const statusStr = String(sub.status || "").trim().toLowerCase();
+      return statusStr === "pending";
+    });
     const levelMap = {}; (lvlRes.data || []).forEach(l => { levelMap[l.position] = l.name; levelMap[l.id] = l.name; });
     const profileMap = {}; (profRes.data || []).forEach(p => { profileMap[p.id] = p.username; });
 
