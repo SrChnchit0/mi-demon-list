@@ -88,7 +88,7 @@ async function sendDiscordEmbed(url, title, description, color = 0x00ffcc, field
 }
 
 async function calculateUserPoints(userId) {
-  const { data: subs } = await supabaseClient.from("submissions").select("*").eq("user_id", userId).eq("status", "approved");
+  const { data: subs } = await supabaseClient.from("submissions").select("*").eq("user_id", userId).ilike("status", "approved");
   let totalPoints = 0;
   if (subs && globalLevels.length > 0) {
     subs.forEach(sub => {
@@ -210,7 +210,7 @@ async function viewUserProfile(userId) {
   container.innerHTML = "<p style='color: var(--text-muted);'>Cargando perfil...</p>";
 
   const { data: profile } = await supabaseClient.from("profiles").select("*").eq("id", userId).single();
-  const { data: userRecords } = await supabaseClient.from("submissions").select("percent, levels(name, position, points)").eq("user_id", userId).eq("status", "approved");
+  const { data: userRecords } = await supabaseClient.from("submissions").select("percent, levels(name, position, points)").eq("user_id", userId).ilike("status", "approved");
 
   if (!profile) {
     container.innerHTML = "<p style='color: var(--danger-color);'>Perfil no encontrado.</p>";
@@ -300,34 +300,40 @@ async function openLevelDetails(levelId) {
 
     const thumb = getYouTubeThumbnail(lvl.video_url);
 
-    const { data: records } = await supabaseClient
+    // Consulta con fallback para obtener récords y asociar perfiles
+    const { data: records, error } = await supabaseClient
         .from("submissions")
         .select(`
             percent, 
             video_url, 
             image_url, 
-            user_notes, 
-            profiles:user_id (username, flag)
+            user_notes,
+            status, 
+            profiles (username, flag)
         `)
         .eq("level_id", levelId)
-        .eq("status", "approved")
+        .ilike("status", "approved")
         .order("percent", { ascending: false });
 
-    let recordsHtml = (records || []).map(r => {
-        const prof = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
-        const username = prof?.username || "Jugador";
-        const flag = prof?.flag || "";
-        
-        return `
-            <div class="list-item" style="display: block; margin-bottom: 8px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span>${flag} <b>${username}</b> - ${r.percent}%</span>
-                    <a href="${r.video_url || r.image_url}" target="_blank" class="btn" style="font-size: 0.8rem; text-decoration: none;">Ver Prueba</a>
+    let recordsHtml = "";
+    if (records && records.length > 0) {
+        recordsHtml = records.map(r => {
+            const prof = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+            const username = prof?.username || "Jugador";
+            const flag = prof?.flag || "";
+            const proof = r.video_url || r.image_url;
+            
+            return `
+                <div class="list-item" style="display: block; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>${flag} <b>${username}</b> - ${r.percent}%</span>
+                        ${proof ? `<a href="${proof}" target="_blank" class="btn" style="font-size: 0.8rem; text-decoration: none;">Ver Prueba</a>` : ''}
+                    </div>
+                    ${r.user_notes ? `<p style="margin: 6px 0 0; font-size: 0.85rem; color: var(--text-muted);">"${r.user_notes}"</p>` : ''}
                 </div>
-                ${r.user_notes ? `<p style="margin: 6px 0 0; font-size: 0.85rem; color: var(--text-muted);">"${r.user_notes}"</p>` : ''}
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+    }
 
     detailContainer.innerHTML = `
         <button onclick="closeLevelDetails()" class="btn" style="margin-bottom: 20px;">⬅ Volver a la Lista</button>
@@ -356,7 +362,7 @@ async function loadLeaderboard() {
 
   try {
     const [subRes, profRes] = await Promise.all([
-      supabaseClient.from("submissions").select("*").eq("status", "approved"),
+      supabaseClient.from("submissions").select("*").ilike("status", "approved"),
       supabaseClient.from("profiles").select("*")
     ]);
 
