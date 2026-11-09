@@ -1,11 +1,10 @@
 const SUPABASE_URL = "https://jdvgdgiomrbmlxvvjvhd.supabase.co"; 
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmdkZ2lvbXJibWx4dnZqdmhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NDY5ODQsImV4cCI6MjEwNjEyMjk4NH0.N842TjW2BF6bjk6vf5mL3LJNCP6PPu3Z_PSGKlnd2EI";
 
-// Webhooks de Discord (Privado para nuevos envíos / Público para aprobados o rechazados)
+// Webhooks de Discord
 const DISCORD_PRIVATE_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966150277275758/guiKF0NBX1D-b3qOcjGBLx5ClICBA0ToBImdoItn-yAEea3qUIBFOx-xcnKZsXjBV1nG";
 const DISCORD_PUBLIC_WEBHOOK_URL = "https://discord.com/api/webhooks/1553966408369573978/Ugr9Q5-zH5gC6mdprG1AuLKToJeiRnojRVZyQYOaiyvuX_12OMNsKH9aqonGqNVCuXKW"; 
 
-// Administrador
 const ADMIN_EMAIL = "fermisael.051178@gmail.com";
 
 let supabaseClient = null;
@@ -86,11 +85,12 @@ async function sendDiscordEmbed(url, title, description, color = 0x00ffcc, field
 }
 
 async function calculateUserPoints(userId) {
-  const { data: subs } = await supabaseClient.from("submissions").select("*").ilike("status", "approved");
+  const { data: subs } = await supabaseClient.from("submissions").select("*");
   let totalPoints = 0;
   if (subs && globalLevels.length > 0) {
     subs.forEach(sub => {
-      if (String(sub.user_id) === String(userId)) {
+      const isApproved = sub.status && String(sub.status).toLowerCase() === "approved";
+      if (isApproved && String(sub.user_id) === String(userId)) {
         const lvl = globalLevels.find(l => String(l.id) === String(sub.level_id));
         if (lvl) {
           totalPoints += (lvl.points || 50);
@@ -211,11 +211,14 @@ async function viewUserProfile(userId) {
 
   const [profileRes, subsRes] = await Promise.all([
     supabaseClient.from("profiles").select("*").eq("id", userId).single(),
-    supabaseClient.from("submissions").select("*").ilike("status", "approved")
+    supabaseClient.from("submissions").select("*")
   ]);
 
   const profile = profileRes.data;
-  const userSubs = (subsRes.data || []).filter(s => String(s.user_id) === String(userId));
+  const userSubs = (subsRes.data || []).filter(s => {
+    const isApproved = s.status && String(s.status).toLowerCase() === "approved";
+    return isApproved && String(s.user_id) === String(userId);
+  });
 
   if (!profile) {
     container.innerHTML = "<p style='color: var(--danger-color);'>Perfil no encontrado.</p>";
@@ -269,8 +272,9 @@ async function loadLevels() {
   if (!container || !supabaseClient) return;
 
   try {
-    const { data: levels } = await supabaseClient.from("levels").select("*").order("position", { ascending: true });
+    const { data: levels } = await supabaseClient.from("levels").select("*");
     globalLevels = levels || [];
+    globalLevels.sort((a, b) => (a.position || 0) - (b.position || 0));
 
     if (globalLevels.length === 0) {
       container.innerHTML = "<p style='color: var(--text-muted);'>No hay niveles.</p>";
@@ -307,9 +311,9 @@ async function openLevelDetails(levelId) {
 
     const thumb = getYouTubeThumbnail(lvl.video_url);
 
-    // Consultas 100% separadas sin joins ni errores 400
+    // Consultas puras sin ordenamiento estricto en la BD para evitar errores 400
     const [subRes, profRes] = await Promise.all([
-        supabaseClient.from("submissions").select("*").ilike("status", "approved"),
+        supabaseClient.from("submissions").select("*"),
         supabaseClient.from("profiles").select("*")
     ]);
 
@@ -318,9 +322,14 @@ async function openLevelDetails(levelId) {
     const profileMap = {};
     profiles.forEach(p => { profileMap[p.id] = p; });
 
-    // Filtramos los récords de este nivel de forma flexible
-    const records = allRecords.filter(r => String(r.level_id) === String(levelId));
-    records.sort((a, b) => b.percent - a.percent);
+    // Filtramos en JS de forma limpia
+    const records = allRecords.filter(r => {
+        const isApproved = r.status && String(r.status).toLowerCase() === "approved";
+        return isApproved && String(r.level_id) === String(levelId);
+    });
+
+    // Ordenamos por porcentaje de mayor a menor en JavaScript
+    records.sort((a, b) => (Number(b.percent) || 0) - (Number(a.percent) || 0));
 
     let recordsHtml = "";
     if (records.length > 0) {
@@ -367,7 +376,7 @@ async function loadLeaderboard() {
 
   try {
     const [subRes, profRes] = await Promise.all([
-      supabaseClient.from("submissions").select("*").ilike("status", "approved"),
+      supabaseClient.from("submissions").select("*"),
       supabaseClient.from("profiles").select("*")
     ]);
 
@@ -381,7 +390,11 @@ async function loadLeaderboard() {
 
     let leaderboardData = [];
     for (const p of profiles) {
-      const userSubs = subs.filter(s => String(s.user_id) === String(p.id));
+      const userSubs = subs.filter(s => {
+        const isApproved = s.status && String(s.status).toLowerCase() === "approved";
+        return isApproved && String(s.user_id) === String(p.id);
+      });
+
       let points = 0;
       userSubs.forEach(sub => {
         const lvl = globalLevels.find(l => String(l.id) === String(sub.level_id));
