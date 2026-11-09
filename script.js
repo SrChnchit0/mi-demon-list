@@ -599,6 +599,23 @@ async function handleRecordSubmit(e) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  console.log("--- INICIANDO DIAGNÓSTICO ---");
+  
+  // 1. Probamos lectura de niveles
+  const { data: levels, error: lvlError } = await supabaseClient.from("levels").select("*");
+  console.log("Niveles cargados desde Supabase:", levels, lvlError);
+  globalLevels = levels || [];
+
+  // 2. Probamos lectura de submissions
+  const { data: subs, error: subError } = await supabaseClient.from("submissions").select("*");
+  console.log("Envíos cargados desde Supabase:", subs, subError);
+
+  // 3. Probamos lectura de perfiles
+  const { data: profs, error: profError } = await supabaseClient.from("profiles").select("*");
+  console.log("Perfiles cargados desde Supabase:", profs, profError);
+
+  console.log("--- FIN DEL DIAGNÓSTICO ---");
+
   await loadLevels();
   loadLeaderboard();
   if (supabaseClient) {
