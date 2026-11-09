@@ -20,13 +20,11 @@ try {
 function openAuthModal() { document.getElementById("auth-modal").style.display = "flex"; }
 function closeAuthModal() { document.getElementById("auth-modal").style.display = "none"; }
 
-// 1. Ocultar pantalla de bienvenida
 function enterMainSite() {
     const welcome = document.getElementById("welcome-screen");
     if (welcome) welcome.style.display = "none";
 }
 
-// 2. Extraer miniatura automática de YouTube para el banner
 function getYouTubeThumbnail(url) {
     if (!url) return null;
     let videoId = null;
@@ -88,13 +86,15 @@ async function sendDiscordEmbed(url, title, description, color = 0x00ffcc, field
 }
 
 async function calculateUserPoints(userId) {
-  const { data: subs } = await supabaseClient.from("submissions").select("*").eq("user_id", userId).ilike("status", "approved");
+  const { data: subs } = await supabaseClient.from("submissions").select("*").ilike("status", "approved");
   let totalPoints = 0;
   if (subs && globalLevels.length > 0) {
     subs.forEach(sub => {
-      const lvl = globalLevels.find(l => l.id == sub.level_id);
-      if (lvl) {
-        totalPoints += (lvl.points || 50);
+      if (String(sub.user_id) === String(userId)) {
+        const lvl = globalLevels.find(l => String(l.id) === String(sub.level_id));
+        if (lvl) {
+          totalPoints += (lvl.points || 50);
+        }
       }
     });
   }
@@ -209,8 +209,13 @@ async function viewUserProfile(userId) {
   const container = document.getElementById("external-profile-container");
   container.innerHTML = "<p style='color: var(--text-muted);'>Cargando perfil...</p>";
 
-  const { data: profile } = await supabaseClient.from("profiles").select("*").eq("id", userId).single();
-  const { data: userRecords } = await supabaseClient.from("submissions").select("percent, levels(name, position, points)").eq("user_id", userId).ilike("status", "approved");
+  const [profileRes, subsRes] = await Promise.all([
+    supabaseClient.from("profiles").select("*").eq("id", userId).single(),
+    supabaseClient.from("submissions").select("*").ilike("status", "approved")
+  ]);
+
+  const profile = profileRes.data;
+  const userSubs = (subsRes.data || []).filter(s => String(s.user_id) === String(userId));
 
   if (!profile) {
     container.innerHTML = "<p style='color: var(--danger-color);'>Perfil no encontrado.</p>";
@@ -225,9 +230,11 @@ async function viewUserProfile(userId) {
     if (found) hardestName = `#${found.position} - ${found.name}`;
   }
 
-  let completedHtml = (userRecords || []).map(r => `
-    <li style="margin-bottom: 6px;">#${r.levels.position} ${r.levels.name} (${r.percent}%) - <b style="color: var(--accent-color);">+${r.levels.points} pts</b></li>
-  `).join('');
+  let completedHtml = userSubs.map(r => {
+    const lvl = globalLevels.find(l => String(l.id) === String(r.level_id));
+    if (!lvl) return '';
+    return `<li style="margin-bottom: 6px;">#${lvl.position} ${lvl.name} (${r.percent}%) - <b style="color: var(--accent-color);">+${lvl.points || 50} pts</b></li>`;
+  }).join('');
 
   container.innerHTML = `
     <div class="profile-card" style="margin-bottom: 20px;">
@@ -288,7 +295,7 @@ async function loadLevels() {
 }
 
 async function openLevelDetails(levelId) {
-    const lvl = globalLevels.find(l => l.id == levelId);
+    const lvl = globalLevels.find(l => String(l.id) === String(levelId));
     if (!lvl) return;
 
     ["levels", "leaderboard", "submit", "profile", "admin", "rules", "view-profile"].forEach(s => {
@@ -300,36 +307,25 @@ async function openLevelDetails(levelId) {
 
     const thumb = getYouTubeThumbnail(lvl.video_url);
 
-    // Hacemos una consulta limpia para ver las columnas reales
-    const { data: allRecords, error } = await supabaseClient
-        .from("submissions")
-        .select("*");
+    // Consultas 100% separadas sin joins ni errores 400
+    const [subRes, profRes] = await Promise.all([
+        supabaseClient.from("submissions").select("*").ilike("status", "approved"),
+        supabaseClient.from("profiles").select("*")
+    ]);
 
-    console.log("¡CONTENIDO REAL DE SUPABASE EN SUBMISSIONS:", allRecords);
-    console.log("Error de Supabase (si hay alguno):", error);
+    const allRecords = subRes.data || [];
+    const profiles = profRes.data || [];
+    const profileMap = {};
+    profiles.forEach(p => { profileMap[p.id] = p; });
 
-    // Filtramos de forma muy flexible para cazar cualquier coincidencia
-    const records = (allRecords || []).filter(r => {
-        const matchesStatus = r.status && String(r.status).toLowerCase() === 'approved';
-        const matchesLevel = String(r.level_id) === String(levelId) || 
-                             String(r.level_id) === String(lvl.id) || 
-                             String(r.level_id) === String(lvl.position) ||
-                             String(r.level_id) === String(lvl.name);
-        return matchesStatus && matchesLevel;
-    });
+    // Filtramos los récords de este nivel de forma flexible
+    const records = allRecords.filter(r => String(r.level_id) === String(levelId));
+    records.sort((a, b) => b.percent - a.percent);
 
     let recordsHtml = "";
-    if (records && records.length > 0) {
-        const { data: profiles } = await supabaseClient.from("profiles").select("*");
-        const profileMap = {};
-        if (profiles) {
-            profiles.forEach(p => { profileMap[p.id] = p; });
-        }
-
+    if (records.length > 0) {
         recordsHtml = records.map(r => {
-            // Buscamos el perfil usando user_id o userid por si cambia el nombre de la columna
-            const userIdKey = r.user_id || r.userid;
-            const prof = profileMap[userIdKey] || { username: "Jugador Anónimo", flag: "🇲🇽" };
+            const prof = profileMap[r.user_id] || { username: "Jugador Anónimo", flag: "🇲🇽" };
             const proof = r.video_url || r.image_url;
             
             return `
@@ -360,20 +356,9 @@ async function openLevelDetails(levelId) {
     `;
 }
 
-    detailContainer.innerHTML = `
-        <button onclick="closeLevelDetails()" class="btn" style="margin-bottom: 20px;">⬅ Volver a la Lista</button>
-        <div class="profile-card" style="margin-bottom: 20px;">
-            <div class="level-banner" style="${thumb ? `background-image: url('${thumb}')` : 'background: #18181b'}"></div>
-            <div style="padding: 24px;">
-                <h2 style="margin: 0 0 10px 0; border: none; padding: 0; color: var(--accent-color);">#${lvl.position} - ${lvl.name}</h2>
-                <p style="color: var(--text-muted); margin: 4px 0;">Creador: <b>${lvl.creator || 'Desconocido'}</b></p>
-                <p style="color: var(--text-muted); margin: 4px 0;">Puntos otorgados: <b>${lvl.points || 50} pts</b></p>
-                ${lvl.video_url ? `<p style="margin-top: 10px;"><a href="${lvl.video_url}" target="_blank" class="btn btn-primary" style="text-decoration:none; display:inline-block;">Ver Video del Nivel</a></p>` : ''}
-            </div>
-        </div>
-        <h3 style="color: var(--text-color);">🏆 Récords Aprobados</h3>
-        <div>${recordsHtml || '<p style="color: var(--text-muted);">Aún no hay récords aprobados para este nivel.</p>'}</div>
-    `;
+function closeLevelDetails() {
+    document.getElementById("level-detail-view").style.display = "none";
+    showSection('levels');
 }
 
 async function loadLeaderboard() {
@@ -396,10 +381,10 @@ async function loadLeaderboard() {
 
     let leaderboardData = [];
     for (const p of profiles) {
-      const userSubs = subs.filter(s => s.user_id === p.id);
+      const userSubs = subs.filter(s => String(s.user_id) === String(p.id));
       let points = 0;
       userSubs.forEach(sub => {
-        const lvl = globalLevels.find(l => l.id == sub.level_id);
+        const lvl = globalLevels.find(l => String(l.id) === String(sub.level_id));
         if (lvl) {
           points += (lvl.points || 50);
         }
@@ -494,7 +479,7 @@ async function updateSubmissionStatus(id, newStatus) {
   const { data: updatedSub } = await supabaseClient.from("submissions").update({ status: newStatus, admin_notes }).eq("id", id).select().single();
   
   if (updatedSub) {
-    const lvl = globalLevels.find(l => l.id == updatedSub.level_id);
+    const lvl = globalLevels.find(l => String(l.id) === String(updatedSub.level_id));
     const levelName = lvl ? `#${lvl.position} ${lvl.name}` : "un nivel";
     const proofUrl = updatedSub.video_url || updatedSub.image_url;
     
@@ -582,7 +567,7 @@ async function handleRecordSubmit(e) {
     alert("¡Récord enviado!");
     document.getElementById("record-form").reset();
     
-    const lvl = globalLevels.find(l => l.id == level_id);
+    const lvl = globalLevels.find(l => String(l.id) === String(level_id));
     const levelName = lvl ? `#${lvl.position} ${lvl.name}` : "un nivel";
     const proofLink = video_url ? `[Ver video](${video_url})` : `[Ver foto de prueba](${image_url})`;
 
