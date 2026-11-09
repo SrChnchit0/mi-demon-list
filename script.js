@@ -300,8 +300,7 @@ async function loadLevels() {
 }
 
 async function openLevelDetails(levelId) {
-    const cleanTargetId = String(levelId).trim();
-    const lvl = globalLevels.find(l => String(l.id).trim() === cleanTargetId);
+    const lvl = globalLevels.find(l => String(l.id).trim() === String(levelId).trim());
     if (!lvl) return;
 
     ["levels", "leaderboard", "submit", "profile", "admin", "rules", "view-profile"].forEach(s => {
@@ -325,14 +324,7 @@ async function openLevelDetails(levelId) {
 
     const records = allRecords.filter(r => {
         const isApproved = r.status && ["approved", "aprobado"].includes(String(r.status).toLowerCase());
-        
-        // Limpieza profunda de ambos IDs para asegurar el match sin importar si son números o textos
-        const subLevelId = r.level_id !== null && r.level_id !== undefined ? String(r.level_id).trim() : "";
-        const currentLvlId = lvl.id !== null && lvl.id !== undefined ? String(lvl.id).trim() : "";
-        const currentLvlPos = lvl.position !== null && lvl.position !== undefined ? String(lvl.position).trim() : "";
-
-        const matchesLevel = (subLevelId === cleanTargetId) || (subLevelId === currentLvlId) || (subLevelId === currentLvlPos);
-
+        const matchesLevel = String(r.level_id).trim() === String(lvl.id).trim();
         return isApproved && matchesLevel;
     });
 
@@ -370,6 +362,11 @@ async function openLevelDetails(levelId) {
         <h3 style="color: var(--text-color);">🏆 Récords Aprobados</h3>
         <div>${recordsHtml || '<p style="color: var(--text-muted);">Aún no hay récords aprobados para este nivel.</p>'}</div>
     `;
+}
+
+function closeLevelDetails() {
+    document.getElementById("level-detail-view").style.display = "none";
+    showSection('levels');
 }
 
 async function loadLeaderboard() {
