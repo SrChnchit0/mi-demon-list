@@ -92,7 +92,7 @@ async function calculateUserPoints(userId) {
     subs.forEach(sub => {
       const isApproved = sub.status && ["approved", "aprobado"].includes(String(sub.status).toLowerCase());
       if (isApproved && String(sub.user_id) === String(userId)) {
-        const lvl = globalLevels.find(l => String(l.id).trim() === String(sub.level_id).trim());
+        const lvl = globalLevels.find(l => String(l.position).trim() === String(sub.level_id).trim() || String(l.id).trim() === String(sub.level_id).trim());
         if (lvl) {
           totalPoints += (lvl.points || 50);
         }
@@ -171,7 +171,7 @@ function renderProfileCard(profile, username, points = 0) {
   else avatarEl.style.backgroundImage = "none";
 
   if (profile?.hardest_level_id) {
-    const hardestLvl = globalLevels.find(l => l.id == profile.hardest_level_id);
+    const hardestLvl = globalLevels.find(l => l.id == profile.hardest_level_id || l.position == profile.hardest_level_id);
     document.getElementById("prev-hardest").textContent = hardestLvl ? `#${hardestLvl.position} - ${hardestLvl.name}` : "Desconocido";
   } else {
     document.getElementById("prev-hardest").textContent = "Ninguno";
@@ -230,12 +230,12 @@ async function viewUserProfile(userId) {
   const points = await calculateUserPoints(userId);
   let hardestName = "Ninguno";
   if (profile.hardest_level_id) {
-    const found = globalLevels.find(l => l.id == profile.hardest_level_id);
+    const found = globalLevels.find(l => l.id == profile.hardest_level_id || l.position == profile.hardest_level_id);
     if (found) hardestName = `#${found.position} - ${found.name}`;
   }
 
   let completedHtml = userSubs.map(r => {
-    const lvl = globalLevels.find(l => String(l.id).trim() === String(r.level_id).trim());
+    const lvl = globalLevels.find(l => String(l.position).trim() === String(r.level_id).trim() || String(l.id).trim() === String(r.level_id).trim());
     if (!lvl) return '';
     return `<li style="margin-bottom: 6px;">#${lvl.position} ${lvl.name} (${r.percent}%) - <b style="color: var(--accent-color);">+${lvl.points || 50} pts</b></li>`;
   }).join('');
@@ -325,12 +325,12 @@ async function openLevelDetails(levelId) {
     const records = allRecords.filter(r => {
         const isApproved = r.status && ["approved", "aprobado"].includes(String(r.status).toLowerCase());
         
-        const subLvl = String(r.level_id).trim().toLowerCase();
-        const matchesId = subLvl === String(lvl.id).trim().toLowerCase();
-        const matchesPos = subLvl === String(lvl.position).trim().toLowerCase();
-        const matchesName = subLvl === String(lvl.name).trim().toLowerCase();
+        // Coincidencia con la posición del nivel guardada en submissions (ej: 1, 15, etc.)[span_1](start_span)[span_1](end_span)
+        const subLevelId = String(r.level_id).trim();
+        const levelPos = String(lvl.position).trim();
+        const levelIdStr = String(lvl.id).trim();
 
-        return isApproved && (matchesId || matchesPos || matchesName);
+        return isApproved && (subLevelId === levelPos || subLevelId === levelIdStr);
     });
 
     records.sort((a, b) => (Number(b.percent) || 0) - (Number(a.percent) || 0));
@@ -401,7 +401,7 @@ async function loadLeaderboard() {
 
       let points = 0;
       userSubs.forEach(sub => {
-        const lvl = globalLevels.find(l => String(l.id).trim() === String(sub.level_id).trim());
+        const lvl = globalLevels.find(l => String(l.position).trim() === String(sub.level_id).trim() || String(l.id).trim() === String(sub.level_id).trim());
         if (lvl) {
           points += (lvl.points || 50);
         }
@@ -456,7 +456,7 @@ async function loadAdminSubmissions() {
     ]);
 
     const pendingSubs = (subRes.data || []).filter(sub => sub.status && sub.status.toLowerCase() === "pending");
-    const levelMap = {}; (lvlRes.data || []).forEach(l => { levelMap[l.id] = l.name; });
+    const levelMap = {}; (lvlRes.data || []).forEach(l => { levelMap[l.position] = l.name; levelMap[l.id] = l.name; });
     const profileMap = {}; (profRes.data || []).forEach(p => { profileMap[p.id] = p.username; });
 
     if (pendingSubs.length === 0) {
@@ -496,7 +496,7 @@ async function updateSubmissionStatus(id, newStatus) {
   const { data: updatedSub } = await supabaseClient.from("submissions").update({ status: newStatus, admin_notes }).eq("id", id).select().single();
   
   if (updatedSub) {
-    const lvl = globalLevels.find(l => String(l.id).trim() === String(updatedSub.level_id).trim());
+    const lvl = globalLevels.find(l => String(l.position).trim() === String(updatedSub.level_id).trim() || String(l.id).trim() === String(updatedSub.level_id).trim());
     const levelName = lvl ? `#${lvl.position} ${lvl.name}` : "un nivel";
     const proofUrl = updatedSub.video_url || updatedSub.image_url;
     
