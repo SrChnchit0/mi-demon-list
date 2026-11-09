@@ -300,26 +300,29 @@ async function openLevelDetails(levelId) {
 
     const thumb = getYouTubeThumbnail(lvl.video_url);
 
-    // Traemos TODOS los récords aprobados sin filtrar por ID estricto primero para depurar
-    const { data: allRecords, error } = await supabaseClient
-        .from("submissions")
-        .select("percent, video_url, image_url, user_notes, user_id, status, level_id")
-        .ilike("status", "approved");
+    // Traemos TODOS los récords aprobados y perfiles directamente
+    const [subRes, profRes] = await Promise.all([
+        supabaseClient.from("submissions").select("*").ilike("status", "approved"),
+        supabaseClient.from("profiles").select("id, username, flag")
+    ]);
 
-    console.log("Nivel actual clickeado ID:", levelId);
-    console.log("Todos los récords aprobados en la BD:", allRecords);
+    const allRecords = subRes.data || [];
+    const profiles = profRes.data || [];
+    const profileMap = {};
+    profiles.forEach(p => { profileMap[p.id] = p; });
 
-    // Filtramos en JavaScript para asegurar que coincida con el nivel actual (por ID o por posición si aplica)
-    const records = (allRecords || []).filter(r => String(r.level_id) === String(levelId));
+    console.log("Nivel seleccionado actual:", lvl);
+    console.log("Todos los récords aprobados en Supabase:", allRecords);
+
+    // Filtramos de forma flexible: por level_id exacto O si coincide con el nombre/posición del nivel
+    const records = allRecords.filter(r => {
+        return String(r.level_id) === String(levelId) || 
+               String(r.level_id) === String(lvl.position) ||
+               String(r.level_id) === String(lvl.name);
+    });
 
     let recordsHtml = "";
     if (records && records.length > 0) {
-        const { data: profiles } = await supabaseClient.from("profiles").select("id, username, flag");
-        const profileMap = {};
-        if (profiles) {
-            profiles.forEach(p => { profileMap[p.id] = p; });
-        }
-
         recordsHtml = records.map(r => {
             const prof = profileMap[r.user_id] || { username: "Jugador Anónimo", flag: "🇲🇽" };
             const proof = r.video_url || r.image_url;
@@ -337,7 +340,7 @@ async function openLevelDetails(levelId) {
     }
 
     detailContainer.innerHTML = `
-        <button onclick="closeLevelDetails()" class="btn" style="margin-bottom: 20px;">⬅ Volver al Leaderboard</button>
+        <button onclick="closeLevelDetails()" class="btn" style="margin-bottom: 20px;">⬅ Volver a la Lista</button>
         <div class="profile-card" style="margin-bottom: 20px;">
             <div class="level-banner" style="${thumb ? `background-image: url('${thumb}')` : 'background: #18181b'}"></div>
             <div style="padding: 24px;">
@@ -351,7 +354,6 @@ async function openLevelDetails(levelId) {
         <div>${recordsHtml || '<p style="color: var(--text-muted);">Aún no hay récords aprobados para este nivel.</p>'}</div>
     `;
 }
-
 async function loadLeaderboard() {
   const container = document.getElementById("leaderboard-container");
   if (!container || !supabaseClient) return;
